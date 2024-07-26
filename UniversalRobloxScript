@@ -16,6 +16,7 @@ local aimAssistRange = 100
 local espEnabled = false
 local aimbotEnabled = false
 local fullbrightEnabled = false
+local infiniteJumpEnabled = false
 local lightingOriginalSettings = {}
 
 -- Save the original lighting settings
@@ -84,6 +85,38 @@ end
 local function toggleAimbot()
     aimbotEnabled = not aimbotEnabled
     print("Aimbot " .. (aimbotEnabled and "Enabled" or "Disabled"))
+end
+
+-- Toggle Infinite Jump
+local function toggleInfiniteJump()
+    infiniteJumpEnabled = not infiniteJumpEnabled
+    print("Infinite Jump " .. (infiniteJumpEnabled and "Enabled" or "Disabled"))
+    
+    -- Enable or disable infinite jump functionality
+    if infiniteJumpEnabled then
+        local player = Players.LocalPlayer
+        local humanoid = player.Character and player.Character:FindFirstChildOfClass('Humanoid')
+        
+        if not humanoid then
+            player.CharacterAdded:Wait()
+            humanoid = player.Character:FindFirstChildOfClass('Humanoid')
+        end
+
+        local function onJumpRequest()
+            if infiniteJumpEnabled and humanoid then
+                humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+                humanoid:ChangeState(Enum.HumanoidStateType.Seated)
+                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+            end
+        end
+
+        local userInputService = game:GetService("UserInputService")
+        userInputService.InputBegan:Connect(function(input, gameProcessed)
+            if not gameProcessed and input.KeyCode == Enum.KeyCode.Space then
+                onJumpRequest()
+            end
+        end)
+    end
 end
 
 -- Create a menu
@@ -163,6 +196,22 @@ local function createMenu()
         toggleAimbotButton.Text = "Aimbot (" .. (aimbotEnabled and "On" or "Off") .. ")"
     end)
 
+    -- Toggle Infinite Jump Button
+    local toggleInfiniteJumpButton = Instance.new("TextButton")
+    toggleInfiniteJumpButton.Size = UDim2.new(1, 0, 0, 40)
+    toggleInfiniteJumpButton.Position = UDim2.new(0, 0, 0.4, 0)
+    toggleInfiniteJumpButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    toggleInfiniteJumpButton.BorderSizePixel = 0
+    toggleInfiniteJumpButton.Text = "Infinite Jump (Off)"
+    toggleInfiniteJumpButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggleInfiniteJumpButton.TextSize = 16
+    toggleInfiniteJumpButton.Parent = menuFrame
+
+    toggleInfiniteJumpButton.MouseButton1Click:Connect(function()
+        toggleInfiniteJump()
+        toggleInfiniteJumpButton.Text = "Infinite Jump (" .. (infiniteJumpEnabled and "On" or "Off") .. ")"
+    end)
+
     -- Add drag functionality
     local dragging
     local dragInput
@@ -229,7 +278,7 @@ local function createESP(player)
             nameTag.Size = UDim2.new(0, 50, 0, 50)
             nameTag.AlwaysOnTop = true
             nameTag.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-            nameTag.Parent = head -- Changed from character to head
+            nameTag.Parent = head
 
             local nameLabel = Instance.new("TextLabel")
             nameLabel.Text = player.Name
@@ -341,3 +390,10 @@ createMenu()
 
 -- Make sure to save lighting settings initially
 saveLightingSettings()
+
+-- Connect player joining to create ESP for new players
+Players.PlayerAdded:Connect(function(player)
+    if espEnabled then
+        createESP(player)
+    end
+end)
