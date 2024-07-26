@@ -9,8 +9,9 @@ local Lighting = game:GetService("Lighting")
 -- Configuration Variables
 local contourColor = Color3.fromRGB(255, 0, 0)
 local contourTransparency = 0.5
-local nameTagSize = 10
+local nameTagSize = 14  -- Adjusted size
 local aimAssistRange = 100
+local walkSpeed = 16  -- Default walk speed
 
 -- Menu Variables
 local espEnabled = false
@@ -37,7 +38,7 @@ local function applyFullbright()
         Lighting.ClockTime = 12
         Lighting.FogEnd = 100000
         Lighting.GlobalShadows = false
-        Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+        Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)  -- Neutral gray
     else
         -- Restore original lighting settings
         Lighting.Brightness = lightingOriginalSettings.Brightness
@@ -119,136 +120,6 @@ local function toggleInfiniteJump()
     end
 end
 
--- Create a menu
-local function createMenu()
-    -- Check if the menu already exists
-    local existingMenu = LocalPlayer.PlayerGui:FindFirstChild("MenuGui")
-    if existingMenu then
-        return
-    end
-
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "MenuGui"
-    screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
-    local menuFrame = Instance.new("Frame")
-    menuFrame.Size = UDim2.new(0, 200, 0, 300)
-    menuFrame.Position = UDim2.new(0.9, -210, 0.5, -150)
-    menuFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    menuFrame.BorderSizePixel = 0
-    menuFrame.Parent = screenGui
-
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Text = "Features Menu"
-    titleLabel.Size = UDim2.new(1, 0, 0, 30)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titleLabel.TextSize = 20
-    titleLabel.TextStrokeTransparency = 0
-    titleLabel.Parent = menuFrame
-
-    -- Toggle Fullbright Button
-    local toggleFullbrightButton = Instance.new("TextButton")
-    toggleFullbrightButton.Size = UDim2.new(1, 0, 0, 40)
-    toggleFullbrightButton.Position = UDim2.new(0, 0, 0.1, 0)
-    toggleFullbrightButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    toggleFullbrightButton.BorderSizePixel = 0
-    toggleFullbrightButton.Text = "Fullbright (Off)"
-    toggleFullbrightButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    toggleFullbrightButton.TextSize = 16
-    toggleFullbrightButton.Parent = menuFrame
-
-    toggleFullbrightButton.MouseButton1Click:Connect(function()
-        toggleFullbright()
-        toggleFullbrightButton.Text = "Fullbright (" .. (fullbrightEnabled and "On" or "Off") .. ")"
-    end)
-
-    -- Toggle ESP Button
-    local toggleESPButton = Instance.new("TextButton")
-    toggleESPButton.Name = "ESPButton" -- Added name for easy access
-    toggleESPButton.Size = UDim2.new(1, 0, 0, 40)
-    toggleESPButton.Position = UDim2.new(0, 0, 0.2, 0)
-    toggleESPButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    toggleESPButton.BorderSizePixel = 0
-    toggleESPButton.Text = "ESP (Off)"
-    toggleESPButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    toggleESPButton.TextSize = 16
-    toggleESPButton.Parent = menuFrame
-
-    toggleESPButton.MouseButton1Click:Connect(function()
-        toggleESP()
-        toggleESPButton.Text = "ESP (" .. (espEnabled and "On" or "Off") .. ")"
-    end)
-
-    -- Toggle Aimbot Button
-    local toggleAimbotButton = Instance.new("TextButton")
-    toggleAimbotButton.Size = UDim2.new(1, 0, 0, 40)
-    toggleAimbotButton.Position = UDim2.new(0, 0, 0.3, 0)
-    toggleAimbotButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    toggleAimbotButton.BorderSizePixel = 0
-    toggleAimbotButton.Text = "Aimbot (Off)"
-    toggleAimbotButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    toggleAimbotButton.TextSize = 16
-    toggleAimbotButton.Parent = menuFrame
-
-    toggleAimbotButton.MouseButton1Click:Connect(function()
-        toggleAimbot()
-        toggleAimbotButton.Text = "Aimbot (" .. (aimbotEnabled and "On" or "Off") .. ")"
-    end)
-
-    -- Toggle Infinite Jump Button
-    local toggleInfiniteJumpButton = Instance.new("TextButton")
-    toggleInfiniteJumpButton.Size = UDim2.new(1, 0, 0, 40)
-    toggleInfiniteJumpButton.Position = UDim2.new(0, 0, 0.4, 0)
-    toggleInfiniteJumpButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    toggleInfiniteJumpButton.BorderSizePixel = 0
-    toggleInfiniteJumpButton.Text = "Infinite Jump (Off)"
-    toggleInfiniteJumpButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    toggleInfiniteJumpButton.TextSize = 16
-    toggleInfiniteJumpButton.Parent = menuFrame
-
-    toggleInfiniteJumpButton.MouseButton1Click:Connect(function()
-        toggleInfiniteJump()
-        toggleInfiniteJumpButton.Text = "Infinite Jump (" .. (infiniteJumpEnabled and "On" or "Off") .. ")"
-    end)
-
-    -- Add drag functionality
-    local dragging
-    local dragInput
-    local dragStart
-    local startPos
-
-    local function update(input)
-        local delta = input.Position - dragStart
-        menuFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-
-    titleLabel.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPos = menuFrame.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            update(input)
-        end
-    end)
-
-    -- Set initial button text based on current state
-    local espButton = menuFrame:FindFirstChild("ESPButton")
-    if espButton then
-        espButton.Text = "ESP (" .. (espEnabled and "On" or "Off") .. ")"
-    end
-end
-
 -- Function to create ESP elements for a player
 local function createESP(player)
     local function setupCharacter(character)
@@ -275,7 +146,7 @@ local function createESP(player)
             local nameTag = Instance.new("BillboardGui")
             nameTag.Name = "ESP_NameTag"
             nameTag.Adornee = head
-            nameTag.Size = UDim2.new(0, 50, 0, 50)
+            nameTag.Size = UDim2.new(0, 50, 0, 50)  -- Adjusted size
             nameTag.AlwaysOnTop = true
             nameTag.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
             nameTag.Parent = head
@@ -379,21 +250,190 @@ RunService.RenderStepped:Connect(function()
     applyFullbright()
 end)
 
--- Create the menu when the player joins or respawns
-LocalPlayer.CharacterAdded:Connect(function()
-    wait(1)
-    createMenu()
-end)
-
--- Create the menu initially
-createMenu()
-
--- Make sure to save lighting settings initially
-saveLightingSettings()
-
--- Connect player joining to create ESP for new players
-Players.PlayerAdded:Connect(function(player)
-    if espEnabled then
-        createESP(player)
+-- Create the menu
+local function createMenu()
+    -- Check if the menu already exists
+    local existingMenu = LocalPlayer.PlayerGui:FindFirstChild("MenuGui")
+    if existingMenu then
+        return
     end
-end)
+
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "MenuGui"
+    screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+    local menuFrame = Instance.new("Frame")
+    menuFrame.Size = UDim2.new(0, 300, 0, 400)  -- Increased size
+    menuFrame.Position = UDim2.new(0, 20, 0, 200)  -- Adjusted position
+    menuFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    menuFrame.BorderSizePixel = 0
+    menuFrame.Parent = screenGui
+
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Text = "Features Menu"
+    titleLabel.Size = UDim2.new(1, 0, 0, 30)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleLabel.TextSize = 20
+    titleLabel.TextStrokeTransparency = 0
+    titleLabel.Parent = menuFrame
+
+    -- Toggle Fullbright Button
+    local toggleFullbrightButton = Instance.new("TextButton")
+    toggleFullbrightButton.Size = UDim2.new(1, 0, 0, 50)  -- Increased button size
+    toggleFullbrightButton.Position = UDim2.new(0, 0, 0.1, 0)
+    toggleFullbrightButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    toggleFullbrightButton.BorderSizePixel = 0
+    toggleFullbrightButton.Text = "Fullbright (Off)"
+    toggleFullbrightButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggleFullbrightButton.TextSize = 16
+    toggleFullbrightButton.Parent = menuFrame
+
+    toggleFullbrightButton.MouseButton1Click:Connect(function()
+        toggleFullbright()
+        toggleFullbrightButton.Text = "Fullbright (" .. (fullbrightEnabled and "On" or "Off") .. ")"
+    end)
+
+    -- Toggle ESP Button
+    local espButton = Instance.new("TextButton")
+    espButton.Name = "ESPButton"
+    espButton.Size = UDim2.new(1, 0, 0, 50)  -- Increased button size
+    espButton.Position = UDim2.new(0, 0, 0.2, 0)
+    espButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    espButton.BorderSizePixel = 0
+    espButton.Text = "ESP (Off)"
+    espButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    espButton.TextSize = 16
+    espButton.Parent = menuFrame
+
+    espButton.MouseButton1Click:Connect(toggleESP)
+
+    -- Toggle Aimbot Button
+    local aimbotButton = Instance.new("TextButton")
+    aimbotButton.Size = UDim2.new(1, 0, 0, 50)  -- Increased button size
+    aimbotButton.Position = UDim2.new(0, 0, 0.3, 0)
+    aimbotButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    aimbotButton.BorderSizePixel = 0
+    aimbotButton.Text = "Aimbot (Off)"
+    aimbotButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    aimbotButton.TextSize = 16
+    aimbotButton.Parent = menuFrame
+
+    aimbotButton.MouseButton1Click:Connect(function()
+        toggleAimbot()
+        aimbotButton.Text = "Aimbot (" .. (aimbotEnabled and "On" or "Off") .. ")"
+    end)
+
+    -- Toggle Infinite Jump Button
+    local infiniteJumpButton = Instance.new("TextButton")
+    infiniteJumpButton.Size = UDim2.new(1, 0, 0, 50)  -- Increased button size
+    infiniteJumpButton.Position = UDim2.new(0, 0, 0.4, 0)
+    infiniteJumpButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    infiniteJumpButton.BorderSizePixel = 0
+    infiniteJumpButton.Text = "Infinite Jump (Off)"
+    infiniteJumpButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    infiniteJumpButton.TextSize = 16
+    infiniteJumpButton.Parent = menuFrame
+
+    infiniteJumpButton.MouseButton1Click:Connect(function()
+        toggleInfiniteJump()
+        infiniteJumpButton.Text = "Infinite Jump (" .. (infiniteJumpEnabled and "On" or "Off") .. ")"
+    end)
+
+    -- Walk Speed Slider
+    local walkSpeedSlider = Instance.new("Frame")
+    walkSpeedSlider.Size = UDim2.new(1, 0, 0, 60)  -- Increased slider size
+    walkSpeedSlider.Position = UDim2.new(0, 0, 0.5, 0)
+    walkSpeedSlider.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    walkSpeedSlider.BorderSizePixel = 0
+    walkSpeedSlider.Parent = menuFrame
+
+    local walkSpeedLabel = Instance.new("TextLabel")
+    walkSpeedLabel.Size = UDim2.new(1, 0, 0.5, 0)
+    walkSpeedLabel.BackgroundTransparency = 1
+    walkSpeedLabel.Text = "Walk Speed: " .. walkSpeed
+    walkSpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    walkSpeedLabel.TextSize = 16
+    walkSpeedLabel.Parent = walkSpeedSlider
+
+    local sliderBar = Instance.new("Frame")
+    sliderBar.Size = UDim2.new(1, 0, 0.5, 0)
+    sliderBar.Position = UDim2.new(0, 0, 0.5, 0)
+    sliderBar.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
+    sliderBar.BorderSizePixel = 0
+    sliderBar.Parent = walkSpeedSlider
+
+    local slider = Instance.new("Frame")
+    slider.Size = UDim2.new(0.5, 0, 1, 0)
+    slider.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+    slider.BorderSizePixel = 0
+    slider.Parent = sliderBar
+
+    local dragging = false
+
+    local function updateWalkSpeed()
+        walkSpeedLabel.Text = "Walk Speed: " .. math.floor(walkSpeed)
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass('Humanoid') then
+            LocalPlayer.Character.Humanoid.WalkSpeed = walkSpeed
+        end
+    end
+
+    sliderBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            local function onMove(moveInput)
+                if dragging then
+                    local newWalkSpeed = math.clamp((moveInput.Position.X - sliderBar.AbsolutePosition.X) / sliderBar.AbsoluteSize.X * 100, 16, 100)
+                    walkSpeed = newWalkSpeed
+                    slider.Size = UDim2.new(newWalkSpeed / 100, 0, 1, 0)
+                    updateWalkSpeed()
+                end
+            end
+
+            UserInputService.InputChanged:Connect(onMove)
+        end
+    end)
+
+    sliderBar.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+
+    -- Add drag functionality
+    local draggingMenu = false
+    local dragInput
+    local dragStart
+    local startPos
+
+    local function updateMenuPosition(input)
+        local delta = input.Position - dragStart
+        menuFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+
+    titleLabel.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            draggingMenu = true
+            dragStart = input.Position
+            startPos = menuFrame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    draggingMenu = false
+                end
+            end)
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if draggingMenu and input.UserInputType == Enum.UserInputType.MouseMovement then
+            updateMenuPosition(input)
+        end
+    end)
+
+    -- Initialize Fullbright settings
+    saveLightingSettings()
+    applyFullbright()
+end
+
+-- Create the menu when the script runs
+createMenu()
