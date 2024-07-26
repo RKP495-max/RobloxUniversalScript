@@ -1,0 +1,343 @@
+-- Services
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+local Lighting = game:GetService("Lighting")
+
+-- Configuration Variables
+local contourColor = Color3.fromRGB(255, 0, 0)
+local contourTransparency = 0.5
+local nameTagSize = 10
+local aimAssistRange = 100
+
+-- Menu Variables
+local espEnabled = false
+local aimbotEnabled = false
+local fullbrightEnabled = false
+local lightingOriginalSettings = {}
+
+-- Save the original lighting settings
+local function saveLightingSettings()
+    lightingOriginalSettings = {
+        Brightness = Lighting.Brightness,
+        ClockTime = Lighting.ClockTime,
+        FogEnd = Lighting.FogEnd,
+        GlobalShadows = Lighting.GlobalShadows,
+        OutdoorAmbient = Lighting.OutdoorAmbient
+    }
+end
+
+-- Apply Fullbright settings
+local function applyFullbright()
+    if fullbrightEnabled then
+        Lighting.Brightness = 2
+        Lighting.ClockTime = 12
+        Lighting.FogEnd = 100000
+        Lighting.GlobalShadows = false
+        Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+    else
+        -- Restore original lighting settings
+        Lighting.Brightness = lightingOriginalSettings.Brightness
+        Lighting.ClockTime = lightingOriginalSettings.ClockTime
+        Lighting.FogEnd = lightingOriginalSettings.FogEnd
+        Lighting.GlobalShadows = lightingOriginalSettings.GlobalShadows
+        Lighting.OutdoorAmbient = lightingOriginalSettings.OutdoorAmbient
+    end
+end
+
+-- Toggle Fullbright
+local function toggleFullbright()
+    fullbrightEnabled = not fullbrightEnabled
+    applyFullbright()
+    print("Fullbright " .. (fullbrightEnabled and "Enabled" or "Disabled"))
+end
+
+-- Toggle ESP
+local function toggleESP()
+    espEnabled = not espEnabled
+    print("ESP " .. (espEnabled and "Enabled" or "Disabled"))
+
+    -- Update the ESP status for all players
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            if espEnabled then
+                createESP(player)
+            else
+                removeESP(player)
+            end
+        end
+    end
+
+    -- Update the menu button text to reflect the new state
+    local menuGui = LocalPlayer.PlayerGui:FindFirstChild("MenuGui")
+    if menuGui then
+        local espButton = menuGui:FindFirstChild("ESPButton")
+        if espButton then
+            espButton.Text = "ESP (" .. (espEnabled and "On" or "Off") .. ")"
+        end
+    end
+end
+
+-- Toggle Aimbot
+local function toggleAimbot()
+    aimbotEnabled = not aimbotEnabled
+    print("Aimbot " .. (aimbotEnabled and "Enabled" or "Disabled"))
+end
+
+-- Create a menu
+local function createMenu()
+    -- Check if the menu already exists
+    local existingMenu = LocalPlayer.PlayerGui:FindFirstChild("MenuGui")
+    if existingMenu then
+        return
+    end
+
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "MenuGui"
+    screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+    local menuFrame = Instance.new("Frame")
+    menuFrame.Size = UDim2.new(0, 200, 0, 300)
+    menuFrame.Position = UDim2.new(0.9, -210, 0.5, -150)
+    menuFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    menuFrame.BorderSizePixel = 0
+    menuFrame.Parent = screenGui
+
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Text = "Features Menu"
+    titleLabel.Size = UDim2.new(1, 0, 0, 30)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleLabel.TextSize = 20
+    titleLabel.TextStrokeTransparency = 0
+    titleLabel.Parent = menuFrame
+
+    -- Toggle Fullbright Button
+    local toggleFullbrightButton = Instance.new("TextButton")
+    toggleFullbrightButton.Size = UDim2.new(1, 0, 0, 40)
+    toggleFullbrightButton.Position = UDim2.new(0, 0, 0.1, 0)
+    toggleFullbrightButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    toggleFullbrightButton.BorderSizePixel = 0
+    toggleFullbrightButton.Text = "Fullbright (Off)"
+    toggleFullbrightButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggleFullbrightButton.TextSize = 16
+    toggleFullbrightButton.Parent = menuFrame
+
+    toggleFullbrightButton.MouseButton1Click:Connect(function()
+        toggleFullbright()
+        toggleFullbrightButton.Text = "Fullbright (" .. (fullbrightEnabled and "On" or "Off") .. ")"
+    end)
+
+    -- Toggle ESP Button
+    local toggleESPButton = Instance.new("TextButton")
+    toggleESPButton.Name = "ESPButton" -- Added name for easy access
+    toggleESPButton.Size = UDim2.new(1, 0, 0, 40)
+    toggleESPButton.Position = UDim2.new(0, 0, 0.2, 0)
+    toggleESPButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    toggleESPButton.BorderSizePixel = 0
+    toggleESPButton.Text = "ESP (Off)"
+    toggleESPButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggleESPButton.TextSize = 16
+    toggleESPButton.Parent = menuFrame
+
+    toggleESPButton.MouseButton1Click:Connect(function()
+        toggleESP()
+        toggleESPButton.Text = "ESP (" .. (espEnabled and "On" or "Off") .. ")"
+    end)
+
+    -- Toggle Aimbot Button
+    local toggleAimbotButton = Instance.new("TextButton")
+    toggleAimbotButton.Size = UDim2.new(1, 0, 0, 40)
+    toggleAimbotButton.Position = UDim2.new(0, 0, 0.3, 0)
+    toggleAimbotButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    toggleAimbotButton.BorderSizePixel = 0
+    toggleAimbotButton.Text = "Aimbot (Off)"
+    toggleAimbotButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggleAimbotButton.TextSize = 16
+    toggleAimbotButton.Parent = menuFrame
+
+    toggleAimbotButton.MouseButton1Click:Connect(function()
+        toggleAimbot()
+        toggleAimbotButton.Text = "Aimbot (" .. (aimbotEnabled and "On" or "Off") .. ")"
+    end)
+
+    -- Add drag functionality
+    local dragging
+    local dragInput
+    local dragStart
+    local startPos
+
+    local function update(input)
+        local delta = input.Position - dragStart
+        menuFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+
+    titleLabel.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = menuFrame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            update(input)
+        end
+    end)
+
+    -- Set initial button text based on current state
+    local espButton = menuFrame:FindFirstChild("ESPButton")
+    if espButton then
+        espButton.Text = "ESP (" .. (espEnabled and "On" or "Off") .. ")"
+    end
+end
+
+-- Function to create ESP elements for a player
+local function createESP(player)
+    local function setupCharacter(character)
+        if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+
+        -- Remove existing ESP if present
+        local existingHighlight = character:FindFirstChild("ESP_Highlight")
+        if existingHighlight then
+            existingHighlight:Destroy()
+        end
+
+        -- Create a Highlight instance for the character
+        local highlight = Instance.new("Highlight")
+        highlight.Name = "ESP_Highlight"
+        highlight.Adornee = character
+        highlight.FillTransparency = 1
+        highlight.OutlineTransparency = contourTransparency
+        highlight.OutlineColor = contourColor
+        highlight.Parent = character
+
+        -- Create a BillboardGui for the name tag
+        local head = character:FindFirstChild("Head")
+        if head then
+            local nameTag = Instance.new("BillboardGui")
+            nameTag.Name = "ESP_NameTag"
+            nameTag.Adornee = head
+            nameTag.Size = UDim2.new(0, 50, 0, 50)
+            nameTag.AlwaysOnTop = true
+            nameTag.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+            nameTag.Parent = head -- Changed from character to head
+
+            local nameLabel = Instance.new("TextLabel")
+            nameLabel.Text = player.Name
+            nameLabel.Size = UDim2.new(1, 0, 1, 0)
+            nameLabel.BackgroundTransparency = 1
+            nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+            nameLabel.TextStrokeTransparency = 0
+            nameLabel.TextSize = nameTagSize
+            nameLabel.TextScaled = true
+            nameLabel.Parent = nameTag
+        end
+    end
+
+    if player.Character then
+        setupCharacter(player.Character)
+    end
+
+    player.CharacterAdded:Connect(function(character)
+        character:WaitForChild("HumanoidRootPart")
+        wait(1)
+        if espEnabled then
+            setupCharacter(character)
+        end
+    end)
+end
+
+-- Function to remove ESP elements for a player
+local function removeESP(player)
+    local character = player.Character
+    if character then
+        local highlight = character:FindFirstChild("ESP_Highlight")
+        if highlight then
+            highlight:Destroy()
+        end
+        local head = character:FindFirstChild("Head")
+        if head then
+            local nameTag = head:FindFirstChild("ESP_NameTag")
+            if nameTag then
+                nameTag:Destroy()
+            end
+        end
+    end
+end
+
+-- Function to get the closest target to the cursor
+local function getClosestTargetToCursor()
+    local mouseLocation = UserInputService:GetMouseLocation()
+    local closestTarget = nil
+    local shortestDistance = math.huge
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+            local screenPoint, onScreen = Camera:WorldToScreenPoint(player.Character.Head.Position)
+            if onScreen then
+                local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - mouseLocation).Magnitude
+                if distance < shortestDistance then
+                    closestTarget = player
+                    shortestDistance = distance
+                end
+            end
+        end
+    end
+
+    return closestTarget
+end
+
+-- Function to aim at the closest target to the cursor
+local function aimAtTarget()
+    local target = getClosestTargetToCursor()
+    if target and target.Character and target.Character:FindFirstChild("Head") then
+        local targetPos = target.Character.Head.Position
+        Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+    end
+end
+
+-- Update Aimbot based on RMB
+RunService.RenderStepped:Connect(function()
+    if aimbotEnabled and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+        aimAtTarget()
+    end
+end)
+
+-- Update ESP and Fullbright based on toggles
+RunService.RenderStepped:Connect(function()
+    if espEnabled then
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and not player.Character:FindFirstChild("ESP_Highlight") then
+                createESP(player)
+            end
+        end
+    else
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                removeESP(player)
+            end
+        end
+    end
+    applyFullbright()
+end)
+
+-- Create the menu when the player joins or respawns
+LocalPlayer.CharacterAdded:Connect(function()
+    wait(1)
+    createMenu()
+end)
+
+-- Create the menu initially
+createMenu()
+
+-- Make sure to save lighting settings initially
+saveLightingSettings()
