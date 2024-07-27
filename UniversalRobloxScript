@@ -21,7 +21,8 @@ local settings = {
     espEnabled = false,
     aimbotEnabled = false,
     infiniteJumpEnabled = false,
-    flyEnabled = false
+    flyEnabled = false,
+    noclipEnabled = false -- Noclip Toggle
 }
 
 local lightingOriginalSettings = {}
@@ -110,7 +111,8 @@ local function toggleFly()
             bodyVelocity.MaxForce = Vector3.new(4000, 4000, 4000) -- Prevents being moved by external forces
             bodyVelocity.Parent = character.PrimaryPart
             
-            RunService.RenderStepped:Connect(function()
+            local flyConnection
+            flyConnection = RunService.RenderStepped:Connect(function()
                 if settings.flyEnabled and character and character:FindFirstChild("HumanoidRootPart") then
                     local moveDirection = Vector3.new(0, 0, 0)
                     if UserInputService:IsKeyDown(Enum.KeyCode.W) then
@@ -139,6 +141,15 @@ local function toggleFly()
                     bodyVelocity.Velocity = Vector3.new(0, 0, 0)
                 end
             end)
+
+            -- Disconnect the fly connection when Fly is toggled off
+            character.Humanoid.Died:Connect(function()
+                settings.flyEnabled = false
+                if flyConnection then
+                    flyConnection:Disconnect()
+                end
+            end)
+
         else
             character.Humanoid.PlatformStand = false
             if bodyVelocity then
@@ -146,6 +157,36 @@ local function toggleFly()
                 bodyVelocity = nil
             end
         end
+    end
+end
+
+local function toggleNoclip()
+    settings.noclipEnabled = not settings.noclipEnabled
+
+    local character = LocalPlayer.Character
+    if character then
+        local function setNoclip(enabled)
+            for _, part in pairs(character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = not enabled
+                end
+            end
+        end
+
+        setNoclip(settings.noclipEnabled)
+
+        if settings.noclipEnabled then
+            character:WaitForChild("HumanoidRootPart").Touched:Connect(function(hit)
+                if settings.noclipEnabled then
+                    hit.CanCollide = false
+                end
+            end)
+        end
+
+        -- Ensure collidability resets after death
+        character:WaitForChild("Humanoid").Died:Connect(function()
+            setNoclip(false)
+        end)
     end
 end
 
@@ -287,6 +328,15 @@ RunService.RenderStepped:Connect(function()
         end
     end
     applyFullbright()
+
+    -- Check noclip status
+    if settings.noclipEnabled and LocalPlayer.Character then
+        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end
 end)
 
 -- Run Aimbot on right mouse button press
@@ -417,10 +467,26 @@ local function createMenu()
             flyButton.Text = "Fly (" .. (settings.flyEnabled and "On" or "Off") .. ")"
         end)
 
+        -- Button to toggle Noclip
+        local noclipButton = Instance.new("TextButton")
+        noclipButton.Size = UDim2.new(1, 0, 0, 50)
+        noclipButton.Position = UDim2.new(0, 0, 0.6, 0)
+        noclipButton.BackgroundColor3 = Color3.fromRGB(100, 0, 100)
+        noclipButton.BorderSizePixel = 0
+        noclipButton.Text = "Noclip (" .. (settings.noclipEnabled and "On" or "Off") .. ")"
+        noclipButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        noclipButton.TextSize = 16
+        noclipButton.Parent = menuFrame
+
+        noclipButton.MouseButton1Click:Connect(function()
+            toggleNoclip()
+            noclipButton.Text = "Noclip (" .. (settings.noclipEnabled and "On" or "Off") .. ")"
+        end)
+
         -- Jump Power Slider
         local jumpPowerSlider = Instance.new("Frame")
         jumpPowerSlider.Size = UDim2.new(1, 0, 0, 40)
-        jumpPowerSlider.Position = UDim2.new(0, 0, 0.6, 0)
+        jumpPowerSlider.Position = UDim2.new(0, 0, 0.8, 0)
         jumpPowerSlider.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
         jumpPowerSlider.BorderSizePixel = 0
         jumpPowerSlider.Parent = menuFrame
@@ -481,7 +547,7 @@ local function createMenu()
         -- Walk Speed Slider
         local walkSpeedSlider = Instance.new("Frame")
         walkSpeedSlider.Size = UDim2.new(1, 0, 0, 40)
-        walkSpeedSlider.Position = UDim2.new(0, 0, 0.7, 0)
+        walkSpeedSlider.Position = UDim2.new(0, 0, 0.9, 0)
         walkSpeedSlider.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
         walkSpeedSlider.BorderSizePixel = 0
         walkSpeedSlider.Parent = menuFrame
@@ -542,7 +608,7 @@ local function createMenu()
         -- Fly Speed Slider
         local flySpeedSlider = Instance.new("Frame")
         flySpeedSlider.Size = UDim2.new(1, 0, 0, 40)
-        flySpeedSlider.Position = UDim2.new(0, 0, 0.8, 0)
+        flySpeedSlider.Position = UDim2.new(0, 0, 1, 0) -- Adjusted position
         flySpeedSlider.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
         flySpeedSlider.BorderSizePixel = 0
         flySpeedSlider.Parent = menuFrame
@@ -636,7 +702,8 @@ local function createMenu()
         aimbotButton.Text = "Aimbot (" .. (settings.aimbotEnabled and "On" or "Off") .. ")"
         infiniteJumpButton.Text = "Infinite Jump (" .. (settings.infiniteJumpEnabled and "On" or "Off") .. ")"
         flyButton.Text = "Fly (" .. (settings.flyEnabled and "On" or "Off") .. ")"
-
+        noclipButton.Text = "Noclip (" .. (settings.noclipEnabled and "On" or "Off") .. ")"
+        -- Removed the no-fall damage button here
     else
         menuGui.Enabled = true -- Simply set it to visible if it exists
         menuFrame.Position = lastMenuPosition -- Restore last position
