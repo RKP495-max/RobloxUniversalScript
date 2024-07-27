@@ -77,7 +77,7 @@ local function toggleInfiniteJump()
     settings.infiniteJumpEnabled = not settings.infiniteJumpEnabled
     local player = Players.LocalPlayer
     local humanoid = player.Character and player.Character:FindFirstChild('Humanoid')
-
+    
     if not humanoid then
         player.CharacterAdded:Wait()
         humanoid = player.Character:FindFirstChild('Humanoid')
@@ -151,6 +151,8 @@ end
 
 local function createESP(player)
     if player.Character then
+        if player.Team == LocalPlayer.Team then return end -- Check if the player is on the same team
+        
         local function setupCharacter(character)
             if not character or not character:FindFirstChild("HumanoidRootPart") then return end
             
@@ -196,7 +198,7 @@ local function createESP(player)
                 healthTag.Name = "HealthTag"
                 healthTag.Size = UDim2.new(1, 0, 0.5, 0) -- Occupies the other half
                 healthTag.BackgroundTransparency = 1
-                healthTag.TextColor3 = Color3.fromRGB(0, 255, 0) -- Change color to green
+                healthTag.TextColor3 = Color3.fromRGB(0, 255, 0)
                 healthTag.TextStrokeTransparency = 0
                 healthTag.TextSize = settings.nameTagSize + 4 -- Increased size for better visibility
                 healthTag.TextScaled = true
@@ -214,7 +216,6 @@ local function createESP(player)
                 local humanoid = character:FindFirstChild("Humanoid")
                 if humanoid then
                     updateHealth() -- Initial health update
-
                     humanoid.HealthChanged:Connect(function()
                         updateHealth()
                     end)
@@ -250,32 +251,64 @@ local function removeESP(player)
     end
 end
 
-local function aimAtTarget()
-    local closestPlayer = nil
-    local closestDistance = math.huge
+-- Aimbot Variables
+local aiming = false -- Whether we're currently aiming at a target
+
+-- Aimbot Functions
+local function getClosestTargetToCursor()
     local mouseLocation = UserInputService:GetMouseLocation()
-    
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+    local closestTarget = nil
+    local shortestDistance = math.huge
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") and player.Team ~= LocalPlayer.Team then
             local screenPoint, onScreen = Camera:WorldToScreenPoint(player.Character.Head.Position)
             if onScreen then
                 local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - mouseLocation).Magnitude
-                if distance < closestDistance then
-                    closestDistance = distance
-                    closestPlayer = player
+                if distance < shortestDistance then
+                    closestTarget = player
+                    shortestDistance = distance
                 end
             end
         end
     end
 
-    return closestPlayer
+    return closestTarget
 end
+
+local function aimAtTarget()
+    local target = getClosestTargetToCursor()
+    if target and target.Character and target.Character:FindFirstChild("Head") then
+        local targetPos = target.Character.Head.Position
+        Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+    end
+end
+
+-- Update Aimbot based on Mouse Button Input
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.UserInputType == Enum.UserInputType.MouseButton2 then
+        aiming = true -- Start aiming when right mouse button is pressed
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.UserInputType == Enum.UserInputType.MouseButton2 then
+        aiming = false -- Stop aiming when right mouse button is released
+    end
+end)
+
+-- Aim at target while aiming is true
+RunService.RenderStepped:Connect(function()
+    if aiming and settings.aimbotEnabled then
+        aimAtTarget()
+    end
+end)
 
 -- Update ESP and Fullbright based on toggles
 RunService.RenderStepped:Connect(function()
     if settings.espEnabled then
         for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character and not player.Character:FindFirstChild("ESP_Highlight") then
+            if player ~= LocalPlayer and player.Team ~= LocalPlayer.Team and player.Character and not player.Character:FindFirstChild("ESP_Highlight") then
                 createESP(player)
             end
         end
@@ -289,27 +322,6 @@ RunService.RenderStepped:Connect(function()
     applyFullbright()
 end)
 
--- Run Aimbot on right mouse button press
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not gameProcessed and input.UserInputType == Enum.UserInputType.MouseButton2 then
-        if settings.aimbotEnabled then
-            currentTarget = aimAtTarget()
-        end
-    end
-end)
-
-UserInputService.InputEnded:Connect(function(input, gameProcessed)
-    if not gameProcessed and input.UserInputType == Enum.UserInputType.MouseButton2 then
-        currentTarget = nil -- Clear the target on button release
-    end
-end)
-
-RunService.RenderStepped:Connect(function()
-    if settings.aimbotEnabled and currentTarget and currentTarget.Character and currentTarget.Character:FindFirstChild("Head") then
-        Camera.CFrame = CFrame.new(Camera.CFrame.Position, currentTarget.Character.Head.Position)
-    end
-end)
-
 -- Create the menu GUI and ensure it's persistent
 local function createMenu()
     local playerGui = LocalPlayer:WaitForChild("PlayerGui")
@@ -321,7 +333,7 @@ local function createMenu()
         menuGui.Parent = playerGui
 
         local menuFrame = Instance.new("Frame")
-        menuFrame.Size = UDim2.new(0, 300, 0, 480) -- Increased height for the new slider
+        menuFrame.Size = UDim2.new(0, 300, 0, 480)
         menuFrame.Position = lastMenuPosition
         menuFrame.BackgroundColor3 = Color3.fromRGB(60, 0, 60)
         menuFrame.BorderSizePixel = 0
@@ -329,7 +341,7 @@ local function createMenu()
 
         -- Title Label
         local titleLabel = Instance.new("TextLabel")
-        titleLabel.Text = "UniversalScript FE" -- Changed the title
+        titleLabel.Text = "UniversalScript FE"
         titleLabel.Size = UDim2.new(1, 0, 0, 30)
         titleLabel.BackgroundTransparency = 1
         titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -502,7 +514,7 @@ local function createMenu()
         sliderBar.Parent = walkSpeedSlider
 
         local slider = Instance.new("Frame")
-        slider.Size = UDim2.new(settings.walkSpeed / 200, 0, 1, 0) -- Adjusted to 200 max
+        slider.Size = UDim2.new((settings.walkSpeed - 10) / 190, 0, 1, 0) -- Adjusted to max 200, min 10
         slider.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
         slider.BorderSizePixel = 0
         slider.Parent = sliderBar
@@ -522,9 +534,9 @@ local function createMenu()
                 draggingWalkSpeed = true
                 local function onMove(moveInput)
                     if draggingWalkSpeed then
-                        local newWalkSpeed = math.clamp((moveInput.Position.X - sliderBar.AbsolutePosition.X) / sliderBar.AbsoluteSize.X * 200, 16, 200)
+                        local newWalkSpeed = math.clamp((moveInput.Position.X - sliderBar.AbsolutePosition.X) / sliderBar.AbsoluteSize.X * 190 + 10, 10, 200)
                         settings.walkSpeed = newWalkSpeed
-                        slider.Size = UDim2.new(newWalkSpeed / 200, 0, 1, 0) -- Adjusted to 200 max
+                        slider.Size = UDim2.new((newWalkSpeed - 10) / 190, 0, 1, 0) -- Adjusted to 190 range
                         updateWalkSpeed()
                     end
                 end
@@ -631,6 +643,7 @@ local function createMenu()
         updateWalkSpeed()
         updateFlySpeed()
         updateJumpPower() -- Initialize jump power
+
         fullbrightButton.Text = "Fullbright (" .. (settings.fullbrightEnabled and "On" or "Off") .. ")"
         espButton.Text = "ESP (" .. (settings.espEnabled and "On" or "Off") .. ")"
         aimbotButton.Text = "Aimbot (" .. (settings.aimbotEnabled and "On" or "Off") .. ")"
