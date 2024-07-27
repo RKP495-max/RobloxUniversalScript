@@ -108,7 +108,7 @@ local function toggleFly()
     settings.flyEnabled = not settings.flyEnabled
     
     local character = LocalPlayer.Character
-    local humanoid = character and character:FindFirstChildOfClass('Humanoid')
+    local humanoid = character and character:FindFirstChild('Humanoid')
 
     if settings.flyEnabled then
         if humanoid then
@@ -404,18 +404,18 @@ local function createMenu()
 
         -- Walk Speed Slider
         local walkSpeedSlider = Instance.new("Frame")
-        walkSpeedSlider.Size = UDim2.new(1, 0, 0, 60)
+        walkSpeedSlider.Size = UDim2.new(1, 0, 0, 40) -- Reduced height from 60 to 40
         walkSpeedSlider.Position = UDim2.new(0, 0, 0.6, 0)
         walkSpeedSlider.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
         walkSpeedSlider.BorderSizePixel = 0
         walkSpeedSlider.Parent = menuFrame
 
         local walkSpeedLabel = Instance.new("TextLabel")
-        walkSpeedLabel.Size = UDim2.new(1, 0, 0.5, 0)
+        walkSpeedLabel.Size = UDim2.new(1, 0, 0.5, 0) -- Adjusted to match new size
         walkSpeedLabel.BackgroundTransparency = 1
         walkSpeedLabel.Text = "Walk Speed: " .. settings.walkSpeed
         walkSpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-        walkSpeedLabel.TextSize = 16
+        walkSpeedLabel.TextSize = 14 -- Reduced text size for a smaller label
         walkSpeedLabel.Parent = walkSpeedSlider
 
         local sliderBar = Instance.new("Frame")
@@ -431,6 +431,7 @@ local function createMenu()
         slider.BorderSizePixel = 0
         slider.Parent = sliderBar
 
+        -- Slider functionality
         local dragging = false
 
         local function updateWalkSpeed()
