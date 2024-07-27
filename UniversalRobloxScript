@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 local Lighting = game:GetService("Lighting")
+local Teams = game:GetService("Teams") -- Ensure to use Teams service
 
 -- Configuration Variables
 local settings = {
@@ -190,8 +191,13 @@ local function toggleNoclip()
     end
 end
 
+-- Function to check if two players are on opposing teams
+local function isEnemy(player1, player2)
+    return player1.Team ~= player2.Team -- Check if teams are different
+end
+
 local function createESP(player)
-    if player.Character then
+    if player.Character and isEnemy(LocalPlayer, player) then -- Only create ESP for enemies
         local function setupCharacter(character)
             if not character or not character:FindFirstChild("HumanoidRootPart") then return end
             
@@ -209,7 +215,7 @@ local function createESP(player)
             highlight.OutlineTransparency = settings.contourTransparency
             highlight.OutlineColor = settings.contourColor
             highlight.Parent = character
-
+            
             -- Create a BillboardGui for the name tag
             local head = character:FindFirstChild("Head")
             if head then
@@ -297,7 +303,7 @@ local function aimAtTarget()
     local mouseLocation = UserInputService:GetMouseLocation()
     
     for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") and isEnemy(LocalPlayer, player) then
             local screenPoint, onScreen = Camera:WorldToScreenPoint(player.Character.Head.Position)
             if onScreen then
                 local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - mouseLocation).Magnitude
@@ -316,7 +322,7 @@ end
 RunService.RenderStepped:Connect(function()
     if settings.espEnabled then
         for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character and not player.Character:FindFirstChild("ESP_Highlight") then
+            if player ~= LocalPlayer and player.Character and isEnemy(LocalPlayer, player) and not player.Character:FindFirstChild("ESP_Highlight") then
                 createESP(player)
             end
         end
