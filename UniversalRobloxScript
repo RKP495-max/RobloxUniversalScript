@@ -373,7 +373,7 @@ local function createMenu()
         local menuFrame = Instance.new("Frame")
         menuFrame.Size = UDim2.new(0, 300, 0, 480) -- Increased height for the new slider
         menuFrame.Position = lastMenuPosition
-        menuFrame.BackgroundColor3 = Color3.fromRGB(60, 0, 60)
+        menuFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)  -- Changed to black
         menuFrame.BorderSizePixel = 0
         menuFrame.Parent = menuGui
 
@@ -382,7 +382,7 @@ local function createMenu()
         titleLabel.Text = "UniversalScript FE" -- Changed the title
         titleLabel.Size = UDim2.new(1, 0, 0, 30)
         titleLabel.BackgroundTransparency = 1
-        titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)  -- Changed to white
         titleLabel.TextSize = 20
         titleLabel.TextStrokeTransparency = 0
         titleLabel.Parent = menuFrame
@@ -391,10 +391,10 @@ local function createMenu()
         local fullbrightButton = Instance.new("TextButton")
         fullbrightButton.Size = UDim2.new(1, 0, 0, 50)
         fullbrightButton.Position = UDim2.new(0, 0, 0.1, 0)
-        fullbrightButton.BackgroundColor3 = Color3.fromRGB(100, 0, 100)
+        fullbrightButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)  -- Background black
         fullbrightButton.BorderSizePixel = 0
         fullbrightButton.Text = "Fullbright (" .. (settings.fullbrightEnabled and "On" or "Off") .. ")"
-        fullbrightButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        fullbrightButton.TextColor3 = Color3.fromRGB(255, 255, 255)  -- Changed to white
         fullbrightButton.TextSize = 16
         fullbrightButton.Parent = menuFrame
 
@@ -407,10 +407,10 @@ local function createMenu()
         local espButton = Instance.new("TextButton")
         espButton.Size = UDim2.new(1, 0, 0, 50)
         espButton.Position = UDim2.new(0, 0, 0.2, 0)
-        espButton.BackgroundColor3 = Color3.fromRGB(100, 0, 100)
+        espButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)  -- Background black
         espButton.BorderSizePixel = 0
         espButton.Text = "ESP (" .. (settings.espEnabled and "On" or "Off") .. ")"
-        espButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        espButton.TextColor3 = Color3.fromRGB(255, 255, 255)  -- Changed to white
         espButton.TextSize = 16
         espButton.Parent = menuFrame
 
@@ -423,10 +423,10 @@ local function createMenu()
         local aimbotButton = Instance.new("TextButton")
         aimbotButton.Size = UDim2.new(1, 0, 0, 50)
         aimbotButton.Position = UDim2.new(0, 0, 0.3, 0)
-        aimbotButton.BackgroundColor3 = Color3.fromRGB(100, 0, 100)
+        aimbotButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)  -- Background black
         aimbotButton.BorderSizePixel = 0
         aimbotButton.Text = "Aimbot (" .. (settings.aimbotEnabled and "On" or "Off") .. ")"
-        aimbotButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        aimbotButton.TextColor3 = Color3.fromRGB(255, 255, 255)  -- Changed to white
         aimbotButton.TextSize = 16
         aimbotButton.Parent = menuFrame
 
@@ -439,10 +439,10 @@ local function createMenu()
         local infiniteJumpButton = Instance.new("TextButton")
         infiniteJumpButton.Size = UDim2.new(1, 0, 0, 50)
         infiniteJumpButton.Position = UDim2.new(0, 0, 0.4, 0)
-        infiniteJumpButton.BackgroundColor3 = Color3.fromRGB(100, 0, 100)
+        infiniteJumpButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)  -- Background black
         infiniteJumpButton.BorderSizePixel = 0
         infiniteJumpButton.Text = "Infinite Jump (" .. (settings.infiniteJumpEnabled and "On" or "Off") .. ")"
-        infiniteJumpButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        infiniteJumpButton.TextColor3 = Color3.fromRGB(255, 255, 255)  -- Changed to white
         infiniteJumpButton.TextSize = 16
         infiniteJumpButton.Parent = menuFrame
 
@@ -455,10 +455,10 @@ local function createMenu()
         local flyButton = Instance.new("TextButton")
         flyButton.Size = UDim2.new(1, 0, 0, 50)
         flyButton.Position = UDim2.new(0, 0, 0.5, 0)
-        flyButton.BackgroundColor3 = Color3.fromRGB(100, 0, 100)
+        flyButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)  -- Background black
         flyButton.BorderSizePixel = 0
         flyButton.Text = "Fly (" .. (settings.flyEnabled and "On" or "Off") .. ")"
-        flyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        flyButton.TextColor3 = Color3.fromRGB(255, 255, 255)  -- Changed to white
         flyButton.TextSize = 16
         flyButton.Parent = menuFrame
 
@@ -471,10 +471,10 @@ local function createMenu()
         local noclipButton = Instance.new("TextButton")
         noclipButton.Size = UDim2.new(1, 0, 0, 50)
         noclipButton.Position = UDim2.new(0, 0, 0.6, 0)
-        noclipButton.BackgroundColor3 = Color3.fromRGB(100, 0, 100)
+        noclipButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)  -- Background black
         noclipButton.BorderSizePixel = 0
         noclipButton.Text = "Noclip (" .. (settings.noclipEnabled and "On" or "Off") .. ")"
-        noclipButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        noclipButton.TextColor3 = Color3.fromRGB(255, 255, 255)  -- Changed to white
         noclipButton.TextSize = 16
         noclipButton.Parent = menuFrame
 
@@ -495,7 +495,7 @@ local function createMenu()
         jumpPowerLabel.Size = UDim2.new(1, 0, 0.5, 0)
         jumpPowerLabel.BackgroundTransparency = 1
         jumpPowerLabel.Text = "Jump Power: " .. settings.jumpPower
-        jumpPowerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        jumpPowerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)  -- Changed to white
         jumpPowerLabel.TextSize = 14
         jumpPowerLabel.Parent = jumpPowerSlider
 
@@ -556,7 +556,7 @@ local function createMenu()
         walkSpeedLabel.Size = UDim2.new(1, 0, 0.5, 0)
         walkSpeedLabel.BackgroundTransparency = 1
         walkSpeedLabel.Text = "Walk Speed: " .. settings.walkSpeed
-        walkSpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        walkSpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)  -- Changed to white
         walkSpeedLabel.TextSize = 14
         walkSpeedLabel.Parent = walkSpeedSlider
 
@@ -617,7 +617,7 @@ local function createMenu()
         flySpeedLabel.Size = UDim2.new(1, 0, 0.5, 0)
         flySpeedLabel.BackgroundTransparency = 1
         flySpeedLabel.Text = "Fly Speed: " .. settings.flySpeed
-        flySpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        flySpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)  -- Changed to white
         flySpeedLabel.TextSize = 14
         flySpeedLabel.Parent = flySpeedSlider
 
@@ -703,7 +703,6 @@ local function createMenu()
         infiniteJumpButton.Text = "Infinite Jump (" .. (settings.infiniteJumpEnabled and "On" or "Off") .. ")"
         flyButton.Text = "Fly (" .. (settings.flyEnabled and "On" or "Off") .. ")"
         noclipButton.Text = "Noclip (" .. (settings.noclipEnabled and "On" or "Off") .. ")"
-        -- Removed the no-fall damage button here
     else
         menuGui.Enabled = true -- Simply set it to visible if it exists
         menuFrame.Position = lastMenuPosition -- Restore last position
