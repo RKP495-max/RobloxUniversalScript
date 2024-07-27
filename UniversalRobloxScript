@@ -15,7 +15,8 @@ local settings = {
     contourTransparency = 0.5,
     nameTagSize = 14,
     walkSpeed = 16,
-    flySpeed = 50,
+    flySpeed = 50, -- This is the default Fly Speed
+    jumpPower = 50, -- New setting for jump power
     fullbrightEnabled = false,
     espEnabled = false,
     aimbotEnabled = false,
@@ -25,12 +26,12 @@ local settings = {
 
 local lightingOriginalSettings = {}
 local bodyVelocity -- Store the BodyVelocity instance
+local lastMenuPosition = UDim2.new(0.5, -150, 0.5, -200) -- Last position of the menu
 local menuGui -- Reference to MenuGui for toggling visibility
 local infiniteJumpConnection -- Reference to the connection
 local currentTarget -- Variable to store the currently targeted player
-local lastMenuPosition = UDim2.new(0.5, -150, 0.5, -200) -- Last position of the menu
 
--- Save the original lighting settings
+-- Functions
 local function saveLightingSettings()
     lightingOriginalSettings = {
         Brightness = Lighting.Brightness,
@@ -41,14 +42,13 @@ local function saveLightingSettings()
     }
 end
 
--- Apply Fullbright settings
 local function applyFullbright()
     if settings.fullbrightEnabled then
-        Lighting.Brightness = 2 -- Set brightness to increased level
-        Lighting.ClockTime = 12 -- Midday
-        Lighting.FogEnd = 100000 -- Set far fog distance
-        Lighting.GlobalShadows = false -- Disable shadows
-        Lighting.OutdoorAmbient = Color3.fromRGB(200, 200, 200) -- Set ambient light without overwhelming whiteness
+        Lighting.Brightness = 2
+        Lighting.ClockTime = 12
+        Lighting.FogEnd = 100000
+        Lighting.GlobalShadows = false
+        Lighting.OutdoorAmbient = Color3.fromRGB(200, 200, 200)
     else
         -- Restore original lighting settings
         Lighting.Brightness = lightingOriginalSettings.Brightness
@@ -59,43 +59,37 @@ local function applyFullbright()
     end
 end
 
--- Toggle Fullbright
 local function toggleFullbright()
     settings.fullbrightEnabled = not settings.fullbrightEnabled
     applyFullbright()
 end
 
--- Toggle ESP
 local function toggleESP()
     settings.espEnabled = not settings.espEnabled
 end
 
--- Toggle Aimbot
 local function toggleAimbot()
     settings.aimbotEnabled = not settings.aimbotEnabled
-    currentTarget = nil -- Reset target when toggling off
+    currentTarget = nil
 end
 
--- Toggle Infinite Jump
 local function toggleInfiniteJump()
     settings.infiniteJumpEnabled = not settings.infiniteJumpEnabled
     local player = Players.LocalPlayer
-    local humanoid = player.Character and player.Character:FindFirstChildOfClass('Humanoid')
+    local humanoid = player.Character and player.Character:FindFirstChild('Humanoid')
 
     if not humanoid then
         player.CharacterAdded:Wait()
-        humanoid = player.Character:FindFirstChildOfClass('Humanoid')
+        humanoid = player.Character:FindFirstChild('Humanoid')
     end
 
     if settings.infiniteJumpEnabled then
-        -- Connect to InputBegan to allow infinite jump
         infiniteJumpConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
             if not gameProcessed and input.KeyCode == Enum.KeyCode.Space then
                 humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
             end
         end)
     else
-        -- Disconnect the event if infinite jump is disabled
         if infiniteJumpConnection then
             infiniteJumpConnection:Disconnect()
             infiniteJumpConnection = nil
@@ -103,65 +97,58 @@ local function toggleInfiniteJump()
     end
 end
 
--- Toggle Fly
 local function toggleFly()
     settings.flyEnabled = not settings.flyEnabled
-    
+
     local character = LocalPlayer.Character
-    local humanoid = character and character:FindFirstChild('Humanoid')
-
-    if settings.flyEnabled then
-        if humanoid then
-            humanoid.PlatformStand = true -- Prevent physics effects
-        end
-        
-        -- Create BodyVelocity for flying
-        bodyVelocity = Instance.new("BodyVelocity")
-        bodyVelocity.Velocity = Vector3.new(0, 0, 0)
-        bodyVelocity.MaxForce = Vector3.new(4000, 4000, 4000)
-        bodyVelocity.Parent = character.PrimaryPart
-        
-        -- Fly Logic
-        RunService.RenderStepped:Connect(function()
-            if settings.flyEnabled and character and character:FindFirstChild("HumanoidRootPart") then
-                local moveDirection = Vector3.new(0, 0, 0)
-
-                if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-                    moveDirection = moveDirection + Camera.CFrame.LookVector
-                end
-                if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-                    moveDirection = moveDirection - Camera.CFrame.LookVector
-                end
-                if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-                    moveDirection = moveDirection - Camera.CFrame.RightVector
-                end
-                if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-                    moveDirection = moveDirection + Camera.CFrame.RightVector
-                end
-
-                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-                    bodyVelocity.Velocity = moveDirection * settings.flySpeed + Vector3.new(0, settings.flySpeed, 0) -- Ascend
-                elseif UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
-                    bodyVelocity.Velocity = moveDirection * settings.flySpeed + Vector3.new(0, -settings.flySpeed, 0) -- Descend
+    if character and character:FindFirstChild('Humanoid') then
+        if settings.flyEnabled then
+            character.Humanoid.PlatformStand = true
+            
+            bodyVelocity = Instance.new("BodyVelocity")
+            bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+            bodyVelocity.MaxForce = Vector3.new(4000, 4000, 4000) -- Prevents being moved by external forces
+            bodyVelocity.Parent = character.PrimaryPart
+            
+            RunService.RenderStepped:Connect(function()
+                if settings.flyEnabled and character and character:FindFirstChild("HumanoidRootPart") then
+                    local moveDirection = Vector3.new(0, 0, 0)
+                    if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+                        moveDirection = moveDirection + Camera.CFrame.LookVector
+                    end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+                        moveDirection = moveDirection - Camera.CFrame.LookVector
+                    end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+                        moveDirection = moveDirection - Camera.CFrame.RightVector
+                    end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+                        moveDirection = moveDirection + Camera.CFrame.RightVector
+                    end
+                    
+                    -- Adjust the velocity for flying
+                    local flyVelocity = moveDirection * settings.flySpeed
+                    if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+                        flyVelocity = flyVelocity + Vector3.new(0, settings.flySpeed, 0) -- Ascend
+                    elseif UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+                        flyVelocity = flyVelocity + Vector3.new(0, -settings.flySpeed, 0) -- Descend
+                    end
+                    
+                    bodyVelocity.Velocity = flyVelocity
                 else
-                    bodyVelocity.Velocity = moveDirection * settings.flySpeed -- Move forward/backward/side
+                    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
                 end
-            else
-                bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+            end)
+        else
+            character.Humanoid.PlatformStand = false
+            if bodyVelocity then
+                bodyVelocity:Destroy()
+                bodyVelocity = nil
             end
-        end)
-    else
-        if humanoid then
-            humanoid.PlatformStand = false -- Restore physics effects
-        end
-        if bodyVelocity then
-            bodyVelocity:Destroy() -- Clean up BodyVelocity
-            bodyVelocity = nil
         end
     end
 end
 
--- Create ESP elements for a player
 local function createESP(player)
     if player.Character then
         local function setupCharacter(character)
@@ -193,23 +180,53 @@ local function createESP(player)
                 nameTag.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
                 nameTag.Parent = head
                 
+                -- Name label
                 local nameLabel = Instance.new("TextLabel")
                 nameLabel.Text = player.Name
-                nameLabel.Size = UDim2.new(1, 0, 1, 0)
+                nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
                 nameLabel.BackgroundTransparency = 1
                 nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
                 nameLabel.TextStrokeTransparency = 0
                 nameLabel.TextSize = settings.nameTagSize
                 nameLabel.TextScaled = true
                 nameLabel.Parent = nameTag
+                
+                -- Health label
+                local healthTag = Instance.new("TextLabel")
+                healthTag.Name = "HealthTag"
+                healthTag.Size = UDim2.new(1, 0, 0.5, 0) -- Occupies the other half
+                healthTag.BackgroundTransparency = 1
+                healthTag.TextColor3 = Color3.fromRGB(0, 255, 0) -- Change color to green
+                healthTag.TextStrokeTransparency = 0
+                healthTag.TextSize = settings.nameTagSize + 4 -- Increased size for better visibility
+                healthTag.TextScaled = true
+                healthTag.Parent = nameTag
+
+                -- Update health percentage
+                local function updateHealth()
+                    if player.Character and player.Character:FindFirstChild("Humanoid") then
+                        local humanoid = player.Character.Humanoid
+                        healthTag.Text = math.floor(humanoid.Health) .. "/" .. math.floor(humanoid.MaxHealth) .. " HP (" .. math.floor((humanoid.Health / humanoid.MaxHealth) * 100) .. "%)"
+                    end
+                end
+
+                -- Update health when the player or their character respawns
+                local humanoid = character:FindFirstChild("Humanoid")
+                if humanoid then
+                    updateHealth() -- Initial health update
+
+                    humanoid.HealthChanged:Connect(function()
+                        updateHealth()
+                    end)
+                end
             end
         end
 
         setupCharacter(player.Character)
         player.CharacterAdded:Connect(function(character)
-            character:WaitForChild("HumanoidRootPart") -- Ensure character is fully loaded
+            character:WaitForChild("HumanoidRootPart")
             if settings.espEnabled then
-                setupCharacter(character) -- Re-setup ESP on respawn
+                setupCharacter(character)
             end
         end)
     end
@@ -233,7 +250,6 @@ local function removeESP(player)
     end
 end
 
--- Aim at the closest target
 local function aimAtTarget()
     local closestPlayer = nil
     local closestDistance = math.huge
@@ -277,7 +293,7 @@ end)
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if not gameProcessed and input.UserInputType == Enum.UserInputType.MouseButton2 then
         if settings.aimbotEnabled then
-            currentTarget = aimAtTarget() -- Aim at the closest target only if Aimbot is enabled
+            currentTarget = aimAtTarget()
         end
     end
 end)
@@ -288,7 +304,6 @@ UserInputService.InputEnded:Connect(function(input, gameProcessed)
     end
 end)
 
--- Update the camera to look at the current target if locked on
 RunService.RenderStepped:Connect(function()
     if settings.aimbotEnabled and currentTarget and currentTarget.Character and currentTarget.Character:FindFirstChild("Head") then
         Camera.CFrame = CFrame.new(Camera.CFrame.Position, currentTarget.Character.Head.Position)
@@ -306,15 +321,15 @@ local function createMenu()
         menuGui.Parent = playerGui
 
         local menuFrame = Instance.new("Frame")
-        menuFrame.Size = UDim2.new(0, 300, 0, 400)
-        menuFrame.Position = lastMenuPosition -- Use the last position instead of the center
+        menuFrame.Size = UDim2.new(0, 300, 0, 480) -- Increased height for the new slider
+        menuFrame.Position = lastMenuPosition
         menuFrame.BackgroundColor3 = Color3.fromRGB(60, 0, 60)
         menuFrame.BorderSizePixel = 0
         menuFrame.Parent = menuGui
 
         -- Title Label
         local titleLabel = Instance.new("TextLabel")
-        titleLabel.Text = "Features Menu"
+        titleLabel.Text = "UniversalScript FE" -- Changed the title
         titleLabel.Size = UDim2.new(1, 0, 0, 30)
         titleLabel.BackgroundTransparency = 1
         titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -402,20 +417,81 @@ local function createMenu()
             flyButton.Text = "Fly (" .. (settings.flyEnabled and "On" or "Off") .. ")"
         end)
 
+        -- Jump Power Slider
+        local jumpPowerSlider = Instance.new("Frame")
+        jumpPowerSlider.Size = UDim2.new(1, 0, 0, 40)
+        jumpPowerSlider.Position = UDim2.new(0, 0, 0.6, 0)
+        jumpPowerSlider.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+        jumpPowerSlider.BorderSizePixel = 0
+        jumpPowerSlider.Parent = menuFrame
+
+        local jumpPowerLabel = Instance.new("TextLabel")
+        jumpPowerLabel.Size = UDim2.new(1, 0, 0.5, 0)
+        jumpPowerLabel.BackgroundTransparency = 1
+        jumpPowerLabel.Text = "Jump Power: " .. settings.jumpPower
+        jumpPowerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        jumpPowerLabel.TextSize = 14
+        jumpPowerLabel.Parent = jumpPowerSlider
+
+        local jumpSliderBar = Instance.new("Frame")
+        jumpSliderBar.Size = UDim2.new(1, 0, 0.5, 0)
+        jumpSliderBar.Position = UDim2.new(0, 0, 0.5, 0)
+        jumpSliderBar.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
+        jumpSliderBar.BorderSizePixel = 0
+        jumpSliderBar.Parent = jumpPowerSlider
+
+        local jumpSlider = Instance.new("Frame")
+        jumpSlider.Size = UDim2.new(settings.jumpPower / 200, 0, 1, 0) -- Adjusted to max 200
+        jumpSlider.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+        jumpSlider.BorderSizePixel = 0
+        jumpSlider.Parent = jumpSliderBar
+
+        -- Slider functionality for Jump Power
+        local draggingJumpPower = false
+
+        local function updateJumpPower()
+            jumpPowerLabel.Text = "Jump Power: " .. math.floor(settings.jumpPower)
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass('Humanoid') then
+                LocalPlayer.Character.Humanoid.JumpPower = settings.jumpPower
+            end
+        end
+
+        jumpSliderBar.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                draggingJumpPower = true
+                local function onMove(moveInput)
+                    if draggingJumpPower then
+                        local newJumpPower = math.clamp((moveInput.Position.X - jumpSliderBar.AbsolutePosition.X) / jumpSliderBar.AbsoluteSize.X * 200, 10, 200) -- New range from 10 to 200
+                        settings.jumpPower = newJumpPower
+                        jumpSlider.Size = UDim2.new(newJumpPower / 200, 0, 1, 0) -- Adjusted to 200 max
+                        updateJumpPower()
+                    end
+                end
+
+                UserInputService.InputChanged:Connect(onMove)
+            end
+        end)
+
+        jumpSliderBar.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                draggingJumpPower = false
+            end
+        end)
+
         -- Walk Speed Slider
         local walkSpeedSlider = Instance.new("Frame")
-        walkSpeedSlider.Size = UDim2.new(1, 0, 0, 40) -- Reduced height from 60 to 40
-        walkSpeedSlider.Position = UDim2.new(0, 0, 0.6, 0)
+        walkSpeedSlider.Size = UDim2.new(1, 0, 0, 40)
+        walkSpeedSlider.Position = UDim2.new(0, 0, 0.7, 0)
         walkSpeedSlider.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
         walkSpeedSlider.BorderSizePixel = 0
         walkSpeedSlider.Parent = menuFrame
 
         local walkSpeedLabel = Instance.new("TextLabel")
-        walkSpeedLabel.Size = UDim2.new(1, 0, 0.5, 0) -- Adjusted to match new size
+        walkSpeedLabel.Size = UDim2.new(1, 0, 0.5, 0)
         walkSpeedLabel.BackgroundTransparency = 1
         walkSpeedLabel.Text = "Walk Speed: " .. settings.walkSpeed
         walkSpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-        walkSpeedLabel.TextSize = 14 -- Reduced text size for a smaller label
+        walkSpeedLabel.TextSize = 14
         walkSpeedLabel.Parent = walkSpeedSlider
 
         local sliderBar = Instance.new("Frame")
@@ -426,13 +502,13 @@ local function createMenu()
         sliderBar.Parent = walkSpeedSlider
 
         local slider = Instance.new("Frame")
-        slider.Size = UDim2.new(settings.walkSpeed / 100, 0, 1, 0)
+        slider.Size = UDim2.new(settings.walkSpeed / 200, 0, 1, 0) -- Adjusted to 200 max
         slider.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
         slider.BorderSizePixel = 0
         slider.Parent = sliderBar
 
-        -- Slider functionality
-        local dragging = false
+        -- Slider functionality for Walk Speed
+        local draggingWalkSpeed = false
 
         local function updateWalkSpeed()
             walkSpeedLabel.Text = "Walk Speed: " .. math.floor(settings.walkSpeed)
@@ -443,12 +519,12 @@ local function createMenu()
 
         sliderBar.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                dragging = true
+                draggingWalkSpeed = true
                 local function onMove(moveInput)
-                    if dragging then
-                        local newWalkSpeed = math.clamp((moveInput.Position.X - sliderBar.AbsolutePosition.X) / sliderBar.AbsoluteSize.X * 100, 16, 100)
+                    if draggingWalkSpeed then
+                        local newWalkSpeed = math.clamp((moveInput.Position.X - sliderBar.AbsolutePosition.X) / sliderBar.AbsoluteSize.X * 200, 16, 200)
                         settings.walkSpeed = newWalkSpeed
-                        slider.Size = UDim2.new(newWalkSpeed / 100, 0, 1, 0)
+                        slider.Size = UDim2.new(newWalkSpeed / 200, 0, 1, 0) -- Adjusted to 200 max
                         updateWalkSpeed()
                     end
                 end
@@ -459,7 +535,65 @@ local function createMenu()
 
         sliderBar.InputEnded:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                dragging = false
+                draggingWalkSpeed = false
+            end
+        end)
+
+        -- Fly Speed Slider
+        local flySpeedSlider = Instance.new("Frame")
+        flySpeedSlider.Size = UDim2.new(1, 0, 0, 40)
+        flySpeedSlider.Position = UDim2.new(0, 0, 0.8, 0)
+        flySpeedSlider.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+        flySpeedSlider.BorderSizePixel = 0
+        flySpeedSlider.Parent = menuFrame
+
+        local flySpeedLabel = Instance.new("TextLabel")
+        flySpeedLabel.Size = UDim2.new(1, 0, 0.5, 0)
+        flySpeedLabel.BackgroundTransparency = 1
+        flySpeedLabel.Text = "Fly Speed: " .. settings.flySpeed
+        flySpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        flySpeedLabel.TextSize = 14
+        flySpeedLabel.Parent = flySpeedSlider
+
+        local flySliderBar = Instance.new("Frame")
+        flySliderBar.Size = UDim2.new(1, 0, 0.5, 0)
+        flySliderBar.Position = UDim2.new(0, 0, 0.5, 0)
+        flySliderBar.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
+        flySliderBar.BorderSizePixel = 0
+        flySliderBar.Parent = flySpeedSlider
+
+        local flySlider = Instance.new("Frame")
+        flySlider.Size = UDim2.new(settings.flySpeed / 200, 0, 1, 0) -- Adjusted to 200 max
+        flySlider.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+        flySlider.BorderSizePixel = 0
+        flySlider.Parent = flySliderBar
+
+        -- Slider functionality for Fly Speed
+        local draggingFlySpeed = false
+
+        local function updateFlySpeed()
+            flySpeedLabel.Text = "Fly Speed: " .. math.floor(settings.flySpeed)
+        end
+
+        flySliderBar.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                draggingFlySpeed = true
+                local function onMove(moveInput)
+                    if draggingFlySpeed then
+                        local newFlySpeed = math.clamp((moveInput.Position.X - flySliderBar.AbsolutePosition.X) / flySliderBar.AbsoluteSize.X * 200, 10, 200) -- New range from 10 to 200
+                        settings.flySpeed = newFlySpeed
+                        flySlider.Size = UDim2.new(newFlySpeed / 200, 0, 1, 0) -- Adjusted to 200 max
+                        updateFlySpeed()
+                    end
+                end
+
+                UserInputService.InputChanged:Connect(onMove)
+            end
+        end)
+
+        flySliderBar.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                draggingFlySpeed = false
             end
         end)
 
@@ -471,7 +605,7 @@ local function createMenu()
         local function updateMenuPosition(input)
             local delta = input.Position - dragStart
             menuFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-            lastMenuPosition = menuFrame.Position -- Update last known position
+            lastMenuPosition = menuFrame.Position
         end
 
         titleLabel.InputBegan:Connect(function(input)
@@ -495,31 +629,46 @@ local function createMenu()
 
         -- Initialize the menu with current settings
         updateWalkSpeed()
+        updateFlySpeed()
+        updateJumpPower() -- Initialize jump power
         fullbrightButton.Text = "Fullbright (" .. (settings.fullbrightEnabled and "On" or "Off") .. ")"
         espButton.Text = "ESP (" .. (settings.espEnabled and "On" or "Off") .. ")"
         aimbotButton.Text = "Aimbot (" .. (settings.aimbotEnabled and "On" or "Off") .. ")"
         infiniteJumpButton.Text = "Infinite Jump (" .. (settings.infiniteJumpEnabled and "On" or "Off") .. ")"
         flyButton.Text = "Fly (" .. (settings.flyEnabled and "On" or "Off") .. ")"
+
     else
         menuGui.Enabled = true -- Simply set it to visible if it exists
-        menuFrame.Position = lastMenuPosition -- Restore last position on respawn/teleport
+        menuFrame.Position = lastMenuPosition -- Restore last position
     end
 end
 
--- Hide the menu when the player dies
+-- Hide the menu when the player dies but remember its position
 Players.LocalPlayer.CharacterRemoving:Connect(function()
     if menuGui then
         menuGui.Enabled = false -- Hide on character removal
     end
 end)
 
+local function onCharacterAdded()
+    -- Ensure the menu stays open and updates settings after respawn
+    if menuGui then
+        menuGui.Enabled = true
+        createMenu() -- Ensure the menu is created again
+        menuGui.Frame.Position = lastMenuPosition -- Restore last position
+    end
+end
+
+-- Create the character added event listener
+Players.LocalPlayer.CharacterAdded:Connect(onCharacterAdded)
+
 -- Create the menu when the script runs
 createMenu()
 
--- Listen for respawn to keep the menu intact
-Players.LocalPlayer.CharacterAdded:Connect(function()
-    createMenu()  -- Ensure the menu is re-created only if necessary (already added)
-end)
-
 -- Initialize lighting settings when the script runs
 saveLightingSettings()
+
+-- Update the menu visibility immediately upon the script's start
+if LocalPlayer.Character then
+    onCharacterAdded() -- Call to ensure settings are applied on load
+end
