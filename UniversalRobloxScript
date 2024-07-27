@@ -1,3 +1,6 @@
+-- UniversalScript FE
+-- This script provides various gameplay enhancements through a menu interface.
+
 -- Services
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -7,18 +10,25 @@ local LocalPlayer = Players.LocalPlayer
 local Lighting = game:GetService("Lighting")
 
 -- Configuration Variables
-local contourColor = Color3.fromRGB(255, 0, 0)
-local contourTransparency = 0.5
-local nameTagSize = 14
-local walkSpeed = 16
-local flySpeed = 50 -- Speed while flying
-local fullbrightEnabled = false
-local espEnabled = false
-local aimbotEnabled = false
-local infiniteJumpEnabled = false
-local flyEnabled = false
+local settings = {
+    contourColor = Color3.fromRGB(255, 0, 0),
+    contourTransparency = 0.5,
+    nameTagSize = 14,
+    walkSpeed = 16,
+    flySpeed = 50,
+    fullbrightEnabled = false,
+    espEnabled = false,
+    aimbotEnabled = false,
+    infiniteJumpEnabled = false,
+    flyEnabled = false
+}
+
 local lightingOriginalSettings = {}
 local bodyVelocity -- Store the BodyVelocity instance
+local menuGui -- Reference to MenuGui for toggling visibility
+local infiniteJumpConnection -- Reference to the connection
+local currentTarget -- Variable to store the currently targeted player
+local lastMenuPosition = UDim2.new(0.5, -150, 0.5, -200) -- Last position of the menu
 
 -- Save the original lighting settings
 local function saveLightingSettings()
@@ -33,12 +43,12 @@ end
 
 -- Apply Fullbright settings
 local function applyFullbright()
-    if fullbrightEnabled then
-        Lighting.Brightness = 2
-        Lighting.ClockTime = 12
-        Lighting.FogEnd = 100000
-        Lighting.GlobalShadows = false
-        Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+    if settings.fullbrightEnabled then
+        Lighting.Brightness = 2 -- Set brightness to increased level
+        Lighting.ClockTime = 12 -- Midday
+        Lighting.FogEnd = 100000 -- Set far fog distance
+        Lighting.GlobalShadows = false -- Disable shadows
+        Lighting.OutdoorAmbient = Color3.fromRGB(200, 200, 200) -- Set ambient light without overwhelming whiteness
     else
         -- Restore original lighting settings
         Lighting.Brightness = lightingOriginalSettings.Brightness
@@ -51,63 +61,56 @@ end
 
 -- Toggle Fullbright
 local function toggleFullbright()
-    fullbrightEnabled = not fullbrightEnabled
+    settings.fullbrightEnabled = not settings.fullbrightEnabled
     applyFullbright()
-    print("Fullbright " .. (fullbrightEnabled and "Enabled" or "Disabled"))
 end
 
 -- Toggle ESP
 local function toggleESP()
-    espEnabled = not espEnabled
-    print("ESP " .. (espEnabled and "Enabled" or "Disabled"))
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            if espEnabled then
-                createESP(player)
-            else
-                removeESP(player)
-            end
-        end
-    end
+    settings.espEnabled = not settings.espEnabled
 end
 
 -- Toggle Aimbot
 local function toggleAimbot()
-    aimbotEnabled = not aimbotEnabled
-    print("Aimbot " .. (aimbotEnabled and "Enabled" or "Disabled"))
+    settings.aimbotEnabled = not settings.aimbotEnabled
+    currentTarget = nil -- Reset target when toggling off
 end
 
 -- Toggle Infinite Jump
 local function toggleInfiniteJump()
-    infiniteJumpEnabled = not infiniteJumpEnabled
-    print("Infinite Jump " .. (infiniteJumpEnabled and "Enabled" or "Disabled"))
+    settings.infiniteJumpEnabled = not settings.infiniteJumpEnabled
     local player = Players.LocalPlayer
     local humanoid = player.Character and player.Character:FindFirstChildOfClass('Humanoid')
 
     if not humanoid then
         player.CharacterAdded:Wait()
-        humanoid = player:FindFirstChildOfClass('Humanoid')
+        humanoid = player.Character:FindFirstChildOfClass('Humanoid')
     end
 
-    if infiniteJumpEnabled then
-        UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if settings.infiniteJumpEnabled then
+        -- Connect to InputBegan to allow infinite jump
+        infiniteJumpConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
             if not gameProcessed and input.KeyCode == Enum.KeyCode.Space then
                 humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
             end
         end)
+    else
+        -- Disconnect the event if infinite jump is disabled
+        if infiniteJumpConnection then
+            infiniteJumpConnection:Disconnect()
+            infiniteJumpConnection = nil
+        end
     end
 end
 
 -- Toggle Fly
 local function toggleFly()
-    flyEnabled = not flyEnabled
-    print("Fly " .. (flyEnabled and "Enabled" or "Disabled"))
-
-    local player = LocalPlayer
-    local character = player.Character
+    settings.flyEnabled = not settings.flyEnabled
+    
+    local character = LocalPlayer.Character
     local humanoid = character and character:FindFirstChildOfClass('Humanoid')
 
-    if flyEnabled then
+    if settings.flyEnabled then
         if humanoid then
             humanoid.PlatformStand = true -- Prevent physics effects
         end
@@ -120,7 +123,7 @@ local function toggleFly()
         
         -- Fly Logic
         RunService.RenderStepped:Connect(function()
-            if flyEnabled and character and character:FindFirstChild("HumanoidRootPart") then
+            if settings.flyEnabled and character and character:FindFirstChild("HumanoidRootPart") then
                 local moveDirection = Vector3.new(0, 0, 0)
 
                 if UserInputService:IsKeyDown(Enum.KeyCode.W) then
@@ -137,11 +140,11 @@ local function toggleFly()
                 end
 
                 if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-                    bodyVelocity.Velocity = moveDirection * flySpeed + Vector3.new(0, flySpeed, 0) -- Ascend
+                    bodyVelocity.Velocity = moveDirection * settings.flySpeed + Vector3.new(0, settings.flySpeed, 0) -- Ascend
                 elseif UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
-                    bodyVelocity.Velocity = moveDirection * flySpeed + Vector3.new(0, -flySpeed, 0) -- Descend
+                    bodyVelocity.Velocity = moveDirection * settings.flySpeed + Vector3.new(0, -settings.flySpeed, 0) -- Descend
                 else
-                    bodyVelocity.Velocity = moveDirection * flySpeed -- Move forward/backward/side
+                    bodyVelocity.Velocity = moveDirection * settings.flySpeed -- Move forward/backward/side
                 end
             else
                 bodyVelocity.Velocity = Vector3.new(0, 0, 0)
@@ -160,87 +163,56 @@ end
 
 -- Create ESP elements for a player
 local function createESP(player)
-    local function setupCharacter(character)
-        if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-
-        -- Remove existing ESP if present
-        local existingHighlight = character:FindFirstChild("ESP_Highlight")
-        if existingHighlight then
-            existingHighlight:Destroy()
-        end
-
-        -- Create a Highlight instance for the character
-        local highlight = Instance.new("Highlight")
-        highlight.Name = "ESP_Highlight"
-        highlight.Adornee = character
-        highlight.FillTransparency = 1
-        highlight.OutlineTransparency = contourTransparency
-        highlight.OutlineColor = contourColor
-        highlight.Parent = character
-
-        -- Create a BillboardGui for the name tag
-        local head = character:FindFirstChild("Head")
-        if head then
-            local nameTag = Instance.new("BillboardGui")
-            nameTag.Name = "ESP_NameTag"
-            nameTag.Adornee = head
-            nameTag.Size = UDim2.new(0, 100, 0, 50)
-            nameTag.AlwaysOnTop = true
-            nameTag.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-            nameTag.Parent = head
+    if player.Character then
+        local function setupCharacter(character)
+            if not character or not character:FindFirstChild("HumanoidRootPart") then return end
             
-            local nameLabel = Instance.new("TextLabel")
-            nameLabel.Text = player.Name
-            nameLabel.Size = UDim2.new(1, 0, 1, 0)
-            nameLabel.BackgroundTransparency = 1
-            nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-            nameLabel.TextStrokeTransparency = 0
-            nameLabel.TextSize = nameTagSize
-            nameLabel.TextScaled = true
-            nameLabel.Parent = nameTag
+            -- Remove existing ESP if present
+            local existingHighlight = character:FindFirstChild("ESP_Highlight")
+            if existingHighlight then
+                existingHighlight:Destroy()
+            end
 
-            -- Create a health bar on the right arm
-            local rightArm = character:FindFirstChild("Right Arm")
-            if rightArm then
-                local healthBarBackground = Instance.new("Frame")
-                healthBarBackground.Size = UDim2.new(0.4, 0, 0.1, 0)  -- Background size
-                healthBarBackground.Position = UDim2.new(1.5, 0, 0, 0)  -- Position it slightly off the arm
-                healthBarBackground.BackgroundColor3 = Color3.fromRGB(0, 0, 0)  -- Black background
-                healthBarBackground.BorderSizePixel = 0
-                healthBarBackground.Parent = rightArm
+            -- Create a Highlight instance for the character
+            local highlight = Instance.new("Highlight")
+            highlight.Name = "ESP_Highlight"
+            highlight.Adornee = character
+            highlight.FillTransparency = 1
+            highlight.OutlineTransparency = settings.contourTransparency
+            highlight.OutlineColor = settings.contourColor
+            highlight.Parent = character
 
-                local healthBar = Instance.new("Frame")
-                healthBar.Name = "HealthBar"
-                healthBar.Size = UDim2.new(1, 0, 1, 0)  -- Full size of the background
-                healthBar.Position = UDim2.new(0, 0, 0, 0)
-                healthBar.BackgroundColor3 = Color3.fromRGB(0, 255, 0)  -- Green health
-                healthBar.BorderSizePixel = 0
-                healthBar.Parent = healthBarBackground
-
-                -- Update health bar based on player's health
-                local humanoid = character:FindFirstChildOfClass("Humanoid")
-                if humanoid then
-                    humanoid:GetPropertyChangedSignal("Health"):Connect(function()
-                        local healthPercentage = humanoid.Health / humanoid.MaxHealth
-                        healthBar.Size = UDim2.new(healthPercentage, 0, 1, 0)  -- Update health bar size
-                        healthBar.BackgroundColor3 = healthPercentage > 0.25 and Color3.fromRGB(0, 255, 0) or (healthPercentage > 0.1 and Color3.fromRGB(255, 255, 0) or Color3.fromRGB(255, 0, 0))  -- Change color based on health
-                    end)
-                end
+            -- Create a BillboardGui for the name tag
+            local head = character:FindFirstChild("Head")
+            if head then
+                local nameTag = Instance.new("BillboardGui")
+                nameTag.Name = "ESP_NameTag"
+                nameTag.Adornee = head
+                nameTag.Size = UDim2.new(0, 50, 0, 50)
+                nameTag.AlwaysOnTop = true
+                nameTag.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+                nameTag.Parent = head
+                
+                local nameLabel = Instance.new("TextLabel")
+                nameLabel.Text = player.Name
+                nameLabel.Size = UDim2.new(1, 0, 1, 0)
+                nameLabel.BackgroundTransparency = 1
+                nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                nameLabel.TextStrokeTransparency = 0
+                nameLabel.TextSize = settings.nameTagSize
+                nameLabel.TextScaled = true
+                nameLabel.Parent = nameTag
             end
         end
-    end
 
-    if player.Character then
         setupCharacter(player.Character)
+        player.CharacterAdded:Connect(function(character)
+            character:WaitForChild("HumanoidRootPart") -- Ensure character is fully loaded
+            if settings.espEnabled then
+                setupCharacter(character) -- Re-setup ESP on respawn
+            end
+        end)
     end
-
-    player.CharacterAdded:Connect(function(character)
-        character:WaitForChild("HumanoidRootPart")
-        wait(1)
-        if espEnabled then
-            setupCharacter(character)
-        end
-    end)
 end
 
 -- Function to remove ESP elements for a player
@@ -256,13 +228,6 @@ local function removeESP(player)
             local nameTag = head:FindFirstChild("ESP_NameTag")
             if nameTag then
                 nameTag:Destroy()
-            end
-        end
-        local rightArm = character:FindFirstChild("Right Arm")
-        if rightArm then
-            local healthBarBackground = rightArm:FindFirstChild("HealthBar")
-            if healthBarBackground then
-                healthBarBackground:Destroy()
             end
         end
     end
@@ -287,21 +252,12 @@ local function aimAtTarget()
         end
     end
 
-    if closestPlayer and closestPlayer.Character then
-        Camera.CFrame = CFrame.new(Camera.CFrame.Position, closestPlayer.Character.Head.Position)
-    end
+    return closestPlayer
 end
-
--- Run Aimbot on right mouse button press
-RunService.RenderStepped:Connect(function()
-    if aimbotEnabled and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
-        aimAtTarget()
-    end
-end)
 
 -- Update ESP and Fullbright based on toggles
 RunService.RenderStepped:Connect(function()
-    if espEnabled then
+    if settings.espEnabled then
         for _, player in ipairs(Players:GetPlayers()) do
             if player ~= LocalPlayer and player.Character and not player.Character:FindFirstChild("ESP_Highlight") then
                 createESP(player)
@@ -317,207 +273,252 @@ RunService.RenderStepped:Connect(function()
     applyFullbright()
 end)
 
--- Create the menu GUI with colors and consistent button styles
+-- Run Aimbot on right mouse button press
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.UserInputType == Enum.UserInputType.MouseButton2 then
+        if settings.aimbotEnabled then
+            currentTarget = aimAtTarget() -- Aim at the closest target only if Aimbot is enabled
+        end
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.UserInputType == Enum.UserInputType.MouseButton2 then
+        currentTarget = nil -- Clear the target on button release
+    end
+end)
+
+-- Update the camera to look at the current target if locked on
+RunService.RenderStepped:Connect(function()
+    if settings.aimbotEnabled and currentTarget and currentTarget.Character and currentTarget.Character:FindFirstChild("Head") then
+        Camera.CFrame = CFrame.new(Camera.CFrame.Position, currentTarget.Character.Head.Position)
+    end
+end)
+
+-- Create the menu GUI and ensure it's persistent
 local function createMenu()
+    local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+
     -- Check if the menu already exists
-    if LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("MenuGui") then
-        return -- Exit the function if the menu already exists
-    end
+    if not playerGui:FindFirstChild("MenuGui") then
+        menuGui = Instance.new("ScreenGui")
+        menuGui.Name = "MenuGui"
+        menuGui.Parent = playerGui
 
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "MenuGui"
-    screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+        local menuFrame = Instance.new("Frame")
+        menuFrame.Size = UDim2.new(0, 300, 0, 400)
+        menuFrame.Position = lastMenuPosition -- Use the last position instead of the center
+        menuFrame.BackgroundColor3 = Color3.fromRGB(60, 0, 60)
+        menuFrame.BorderSizePixel = 0
+        menuFrame.Parent = menuGui
 
-    local menuFrame = Instance.new("Frame")
-    menuFrame.Size = UDim2.new(0, 300, 0, 400)
-    menuFrame.Position = UDim2.new(0.5, -150, 0.5, -200)
-    menuFrame.BackgroundColor3 = Color3.fromRGB(60, 0, 60) -- Black purple color (dark purple)
-    menuFrame.BorderSizePixel = 0
-    menuFrame.Parent = screenGui
+        -- Title Label
+        local titleLabel = Instance.new("TextLabel")
+        titleLabel.Text = "Features Menu"
+        titleLabel.Size = UDim2.new(1, 0, 0, 30)
+        titleLabel.BackgroundTransparency = 1
+        titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        titleLabel.TextSize = 20
+        titleLabel.TextStrokeTransparency = 0
+        titleLabel.Parent = menuFrame
 
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Text = "Features Menu"
-    titleLabel.Size = UDim2.new(1, 0, 0, 30)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titleLabel.TextSize = 20
-    titleLabel.TextStrokeTransparency = 0
-    titleLabel.Parent = menuFrame
+        -- Button to toggle Fullbright
+        local fullbrightButton = Instance.new("TextButton")
+        fullbrightButton.Size = UDim2.new(1, 0, 0, 50)
+        fullbrightButton.Position = UDim2.new(0, 0, 0.1, 0)
+        fullbrightButton.BackgroundColor3 = Color3.fromRGB(100, 0, 100)
+        fullbrightButton.BorderSizePixel = 0
+        fullbrightButton.Text = "Fullbright (" .. (settings.fullbrightEnabled and "On" or "Off") .. ")"
+        fullbrightButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        fullbrightButton.TextSize = 16
+        fullbrightButton.Parent = menuFrame
 
-    -- Button to toggle Fullbright
-    local fullbrightButton = Instance.new("TextButton")
-    fullbrightButton.Size = UDim2.new(1, 0, 0, 50)
-    fullbrightButton.Position = UDim2.new(0, 0, 0.1, 0)
-    fullbrightButton.BackgroundColor3 = Color3.fromRGB(100, 0, 100)
-    fullbrightButton.BorderSizePixel = 0
-    fullbrightButton.Text = "Fullbright (Off)"
-    fullbrightButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    fullbrightButton.TextSize = 16
-    fullbrightButton.Parent = menuFrame
+        fullbrightButton.MouseButton1Click:Connect(function()
+            toggleFullbright()
+            fullbrightButton.Text = "Fullbright (" .. (settings.fullbrightEnabled and "On" or "Off") .. ")"
+        end)
 
-    fullbrightButton.MouseButton1Click:Connect(function()
-        toggleFullbright()
-        fullbrightButton.Text = "Fullbright (" .. (fullbrightEnabled and "On" or "Off") .. ")"
-    end)
+        -- Button to toggle ESP
+        local espButton = Instance.new("TextButton")
+        espButton.Size = UDim2.new(1, 0, 0, 50)
+        espButton.Position = UDim2.new(0, 0, 0.2, 0)
+        espButton.BackgroundColor3 = Color3.fromRGB(100, 0, 100)
+        espButton.BorderSizePixel = 0
+        espButton.Text = "ESP (" .. (settings.espEnabled and "On" or "Off") .. ")"
+        espButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        espButton.TextSize = 16
+        espButton.Parent = menuFrame
 
-    -- Button to toggle ESP
-    local espButton = Instance.new("TextButton")
-    espButton.Name = "ESPButton"
-    espButton.Size = UDim2.new(1, 0, 0, 50)
-    espButton.Position = UDim2.new(0, 0, 0.2, 0)
-    espButton.BackgroundColor3 = Color3.fromRGB(100, 0, 100)
-    espButton.BorderSizePixel = 0
-    espButton.Text = "ESP (Off)"
-    espButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    espButton.TextSize = 16
-    espButton.Parent = menuFrame
+        espButton.MouseButton1Click:Connect(function()
+            toggleESP()
+            espButton.Text = "ESP (" .. (settings.espEnabled and "On" or "Off") .. ")"
+        end)
 
-    espButton.MouseButton1Click:Connect(function()
-        toggleESP()
-        espButton.Text = "ESP (" .. (espEnabled and "On" or "Off") .. ")"
-    end)
+        -- Button to toggle Aimbot
+        local aimbotButton = Instance.new("TextButton")
+        aimbotButton.Size = UDim2.new(1, 0, 0, 50)
+        aimbotButton.Position = UDim2.new(0, 0, 0.3, 0)
+        aimbotButton.BackgroundColor3 = Color3.fromRGB(100, 0, 100)
+        aimbotButton.BorderSizePixel = 0
+        aimbotButton.Text = "Aimbot (" .. (settings.aimbotEnabled and "On" or "Off") .. ")"
+        aimbotButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        aimbotButton.TextSize = 16
+        aimbotButton.Parent = menuFrame
 
-    -- Button to toggle Aimbot
-    local aimbotButton = Instance.new("TextButton")
-    aimbotButton.Size = UDim2.new(1, 0, 0, 50)
-    aimbotButton.Position = UDim2.new(0, 0, 0.3, 0)
-    aimbotButton.BackgroundColor3 = Color3.fromRGB(100, 0, 100)
-    aimbotButton.BorderSizePixel = 0
-    aimbotButton.Text = "Aimbot (Off)"
-    aimbotButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    aimbotButton.TextSize = 16
-    aimbotButton.Parent = menuFrame
+        aimbotButton.MouseButton1Click:Connect(function()
+            toggleAimbot()
+            aimbotButton.Text = "Aimbot (" .. (settings.aimbotEnabled and "On" or "Off") .. ")"
+        end)
 
-    aimbotButton.MouseButton1Click:Connect(function()
-        toggleAimbot()
-        aimbotButton.Text = "Aimbot (" .. (aimbotEnabled and "On" or "Off") .. ")"
-    end)
+        -- Button to toggle Infinite Jump
+        local infiniteJumpButton = Instance.new("TextButton")
+        infiniteJumpButton.Size = UDim2.new(1, 0, 0, 50)
+        infiniteJumpButton.Position = UDim2.new(0, 0, 0.4, 0)
+        infiniteJumpButton.BackgroundColor3 = Color3.fromRGB(100, 0, 100)
+        infiniteJumpButton.BorderSizePixel = 0
+        infiniteJumpButton.Text = "Infinite Jump (" .. (settings.infiniteJumpEnabled and "On" or "Off") .. ")"
+        infiniteJumpButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        infiniteJumpButton.TextSize = 16
+        infiniteJumpButton.Parent = menuFrame
 
-    -- Button to toggle Infinite Jump
-    local infiniteJumpButton = Instance.new("TextButton")
-    infiniteJumpButton.Size = UDim2.new(1, 0, 0, 50)
-    infiniteJumpButton.Position = UDim2.new(0, 0, 0.4, 0)
-    infiniteJumpButton.BackgroundColor3 = Color3.fromRGB(100, 0, 100)
-    infiniteJumpButton.BorderSizePixel = 0
-    infiniteJumpButton.Text = "Infinite Jump (Off)"
-    infiniteJumpButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    infiniteJumpButton.TextSize = 16
-    infiniteJumpButton.Parent = menuFrame
+        infiniteJumpButton.MouseButton1Click:Connect(function()
+            toggleInfiniteJump()
+            infiniteJumpButton.Text = "Infinite Jump (" .. (settings.infiniteJumpEnabled and "On" or "Off") .. ")"
+        end)
 
-    infiniteJumpButton.MouseButton1Click:Connect(function()
-        toggleInfiniteJump()
-        infiniteJumpButton.Text = "Infinite Jump (" .. (infiniteJumpEnabled and "On" or "Off") .. ")"
-    end)
+        -- Button to toggle Fly
+        local flyButton = Instance.new("TextButton")
+        flyButton.Size = UDim2.new(1, 0, 0, 50)
+        flyButton.Position = UDim2.new(0, 0, 0.5, 0)
+        flyButton.BackgroundColor3 = Color3.fromRGB(100, 0, 100)
+        flyButton.BorderSizePixel = 0
+        flyButton.Text = "Fly (" .. (settings.flyEnabled and "On" or "Off") .. ")"
+        flyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        flyButton.TextSize = 16
+        flyButton.Parent = menuFrame
 
-    -- Button to toggle Fly
-    local flyButton = Instance.new("TextButton")
-    flyButton.Size = UDim2.new(1, 0, 0, 50)
-    flyButton.Position = UDim2.new(0, 0, 0.5, 0)
-    flyButton.BackgroundColor3 = Color3.fromRGB(100, 0, 100)
-    flyButton.BorderSizePixel = 0
-    flyButton.Text = "Fly (Off)"
-    flyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    flyButton.TextSize = 16
-    flyButton.Parent = menuFrame
+        flyButton.MouseButton1Click:Connect(function()
+            toggleFly()
+            flyButton.Text = "Fly (" .. (settings.flyEnabled and "On" or "Off") .. ")"
+        end)
 
-    flyButton.MouseButton1Click:Connect(function()
-        toggleFly()
-        flyButton.Text = "Fly (" .. (flyEnabled and "On" or "Off") .. ")"
-    end)
+        -- Walk Speed Slider
+        local walkSpeedSlider = Instance.new("Frame")
+        walkSpeedSlider.Size = UDim2.new(1, 0, 0, 60)
+        walkSpeedSlider.Position = UDim2.new(0, 0, 0.6, 0)
+        walkSpeedSlider.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+        walkSpeedSlider.BorderSizePixel = 0
+        walkSpeedSlider.Parent = menuFrame
 
-    -- Walk Speed Slider
-    local walkSpeedSlider = Instance.new("Frame")
-    walkSpeedSlider.Size = UDim2.new(1, 0, 0, 60)
-    walkSpeedSlider.Position = UDim2.new(0, 0, 0.6, 0)
-    walkSpeedSlider.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
-    walkSpeedSlider.BorderSizePixel = 0
-    walkSpeedSlider.Parent = menuFrame
+        local walkSpeedLabel = Instance.new("TextLabel")
+        walkSpeedLabel.Size = UDim2.new(1, 0, 0.5, 0)
+        walkSpeedLabel.BackgroundTransparency = 1
+        walkSpeedLabel.Text = "Walk Speed: " .. settings.walkSpeed
+        walkSpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        walkSpeedLabel.TextSize = 16
+        walkSpeedLabel.Parent = walkSpeedSlider
 
-    local walkSpeedLabel = Instance.new("TextLabel")
-    walkSpeedLabel.Size = UDim2.new(1, 0, 0.5, 0)
-    walkSpeedLabel.BackgroundTransparency = 1
-    walkSpeedLabel.Text = "Walk Speed: " .. walkSpeed
-    walkSpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    walkSpeedLabel.TextSize = 16
-    walkSpeedLabel.Parent = walkSpeedSlider
+        local sliderBar = Instance.new("Frame")
+        sliderBar.Size = UDim2.new(1, 0, 0.5, 0)
+        sliderBar.Position = UDim2.new(0, 0, 0.5, 0)
+        sliderBar.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
+        sliderBar.BorderSizePixel = 0
+        sliderBar.Parent = walkSpeedSlider
 
-    local sliderBar = Instance.new("Frame")
-    sliderBar.Size = UDim2.new(1, 0, 0.5, 0)
-    sliderBar.Position = UDim2.new(0, 0, 0.5, 0)
-    sliderBar.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
-    sliderBar.BorderSizePixel = 0
-    sliderBar.Parent = walkSpeedSlider
+        local slider = Instance.new("Frame")
+        slider.Size = UDim2.new(settings.walkSpeed / 100, 0, 1, 0)
+        slider.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+        slider.BorderSizePixel = 0
+        slider.Parent = sliderBar
 
-    local slider = Instance.new("Frame")
-    slider.Size = UDim2.new(walkSpeed / 100, 0, 1, 0) -- Set initial size based on default walk speed
-    slider.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-    slider.BorderSizePixel = 0
-    slider.Parent = sliderBar
+        local dragging = false
 
-    local dragging = false
-
-    local function updateWalkSpeed()
-        walkSpeedLabel.Text = "Walk Speed: " .. math.floor(walkSpeed)
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass('Humanoid') then
-            LocalPlayer.Character.Humanoid.WalkSpeed = walkSpeed
-        end
-    end
-
-    sliderBar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            local function onMove(moveInput)
-                if dragging then
-                    local newWalkSpeed = math.clamp((moveInput.Position.X - sliderBar.AbsolutePosition.X) / sliderBar.AbsoluteSize.X * 100, 16, 100)
-                    walkSpeed = newWalkSpeed
-                    slider.Size = UDim2.new(newWalkSpeed / 100, 0, 1, 0)
-                    updateWalkSpeed()
-                end
+        local function updateWalkSpeed()
+            walkSpeedLabel.Text = "Walk Speed: " .. math.floor(settings.walkSpeed)
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass('Humanoid') then
+                LocalPlayer.Character.Humanoid.WalkSpeed = settings.walkSpeed
             end
-
-            UserInputService.InputChanged:Connect(onMove)
         end
-    end)
 
-    sliderBar.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
-
-    -- Drag functionality for the menu
-    local draggingMenu = false
-    local dragStart
-    local startPos
-
-    local function updateMenuPosition(input)
-        local delta = input.Position - dragStart
-        menuFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-
-    titleLabel.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            draggingMenu = true
-            dragStart = input.Position
-            startPos = menuFrame.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    draggingMenu = false
+        sliderBar.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                dragging = true
+                local function onMove(moveInput)
+                    if dragging then
+                        local newWalkSpeed = math.clamp((moveInput.Position.X - sliderBar.AbsolutePosition.X) / sliderBar.AbsoluteSize.X * 100, 16, 100)
+                        settings.walkSpeed = newWalkSpeed
+                        slider.Size = UDim2.new(newWalkSpeed / 100, 0, 1, 0)
+                        updateWalkSpeed()
+                    end
                 end
-            end)
-        end
-    end)
 
-    UserInputService.InputChanged:Connect(function(input)
-        if draggingMenu and input.UserInputType == Enum.UserInputType.MouseMovement then
-            updateMenuPosition(input)
-        end
-    end)
+                UserInputService.InputChanged:Connect(onMove)
+            end
+        end)
 
-    -- Initialize the menu
-    saveLightingSettings()
-    applyFullbright()
+        sliderBar.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                dragging = false
+            end
+        end)
+
+        -- Drag functionality for the menu
+        local draggingMenu = false
+        local dragStart
+        local startPos
+
+        local function updateMenuPosition(input)
+            local delta = input.Position - dragStart
+            menuFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            lastMenuPosition = menuFrame.Position -- Update last known position
+        end
+
+        titleLabel.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                draggingMenu = true
+                dragStart = input.Position
+                startPos = menuFrame.Position
+                input.Changed:Connect(function()
+                    if input.UserInputState == Enum.UserInputState.End then
+                        draggingMenu = false
+                    end
+                end)
+            end
+        end)
+
+        UserInputService.InputChanged:Connect(function(input)
+            if draggingMenu and input.UserInputType == Enum.UserInputType.MouseMovement then
+                updateMenuPosition(input)
+            end
+        end)
+
+        -- Initialize the menu with current settings
+        updateWalkSpeed()
+        fullbrightButton.Text = "Fullbright (" .. (settings.fullbrightEnabled and "On" or "Off") .. ")"
+        espButton.Text = "ESP (" .. (settings.espEnabled and "On" or "Off") .. ")"
+        aimbotButton.Text = "Aimbot (" .. (settings.aimbotEnabled and "On" or "Off") .. ")"
+        infiniteJumpButton.Text = "Infinite Jump (" .. (settings.infiniteJumpEnabled and "On" or "Off") .. ")"
+        flyButton.Text = "Fly (" .. (settings.flyEnabled and "On" or "Off") .. ")"
+    else
+        menuGui.Enabled = true -- Simply set it to visible if it exists
+        menuFrame.Position = lastMenuPosition -- Restore last position on respawn/teleport
+    end
 end
+
+-- Hide the menu when the player dies
+Players.LocalPlayer.CharacterRemoving:Connect(function()
+    if menuGui then
+        menuGui.Enabled = false -- Hide on character removal
+    end
+end)
 
 -- Create the menu when the script runs
 createMenu()
+
+-- Listen for respawn to keep the menu intact
+Players.LocalPlayer.CharacterAdded:Connect(function()
+    createMenu()  -- Ensure the menu is re-created only if necessary (already added)
+end)
+
+-- Initialize lighting settings when the script runs
+saveLightingSettings()
