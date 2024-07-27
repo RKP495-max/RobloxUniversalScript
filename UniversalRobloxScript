@@ -60,7 +60,6 @@ end
 local function toggleESP()
     espEnabled = not espEnabled
     print("ESP " .. (espEnabled and "Enabled" or "Disabled"))
-
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
             if espEnabled then
@@ -68,15 +67,6 @@ local function toggleESP()
             else
                 removeESP(player)
             end
-        end
-    end
-
-    -- Update button text
-    local menuGui = LocalPlayer.PlayerGui:FindFirstChild("MenuGui")
-    if menuGui then
-        local espButton = menuGui:FindFirstChild("ESPButton")
-        if espButton then
-            espButton.Text = "ESP (" .. (espEnabled and "On" or "Off") .. ")"
         end
     end
 end
@@ -91,13 +81,12 @@ end
 local function toggleInfiniteJump()
     infiniteJumpEnabled = not infiniteJumpEnabled
     print("Infinite Jump " .. (infiniteJumpEnabled and "Enabled" or "Disabled"))
-
     local player = Players.LocalPlayer
     local humanoid = player.Character and player.Character:FindFirstChildOfClass('Humanoid')
 
     if not humanoid then
         player.CharacterAdded:Wait()
-        humanoid = player.Character:FindFirstChildOfClass('Humanoid')
+        humanoid = player:FindFirstChildOfClass('Humanoid')
     end
 
     if infiniteJumpEnabled then
@@ -195,7 +184,7 @@ local function createESP(player)
             local nameTag = Instance.new("BillboardGui")
             nameTag.Name = "ESP_NameTag"
             nameTag.Adornee = head
-            nameTag.Size = UDim2.new(0, 50, 0, 50)
+            nameTag.Size = UDim2.new(0, 100, 0, 50)
             nameTag.AlwaysOnTop = true
             nameTag.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
             nameTag.Parent = head
@@ -209,6 +198,35 @@ local function createESP(player)
             nameLabel.TextSize = nameTagSize
             nameLabel.TextScaled = true
             nameLabel.Parent = nameTag
+
+            -- Create a health bar on the right arm
+            local rightArm = character:FindFirstChild("Right Arm")
+            if rightArm then
+                local healthBarBackground = Instance.new("Frame")
+                healthBarBackground.Size = UDim2.new(0.4, 0, 0.1, 0)  -- Background size
+                healthBarBackground.Position = UDim2.new(1.5, 0, 0, 0)  -- Position it slightly off the arm
+                healthBarBackground.BackgroundColor3 = Color3.fromRGB(0, 0, 0)  -- Black background
+                healthBarBackground.BorderSizePixel = 0
+                healthBarBackground.Parent = rightArm
+
+                local healthBar = Instance.new("Frame")
+                healthBar.Name = "HealthBar"
+                healthBar.Size = UDim2.new(1, 0, 1, 0)  -- Full size of the background
+                healthBar.Position = UDim2.new(0, 0, 0, 0)
+                healthBar.BackgroundColor3 = Color3.fromRGB(0, 255, 0)  -- Green health
+                healthBar.BorderSizePixel = 0
+                healthBar.Parent = healthBarBackground
+
+                -- Update health bar based on player's health
+                local humanoid = character:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    humanoid:GetPropertyChangedSignal("Health"):Connect(function()
+                        local healthPercentage = humanoid.Health / humanoid.MaxHealth
+                        healthBar.Size = UDim2.new(healthPercentage, 0, 1, 0)  -- Update health bar size
+                        healthBar.BackgroundColor3 = healthPercentage > 0.25 and Color3.fromRGB(0, 255, 0) or (healthPercentage > 0.1 and Color3.fromRGB(255, 255, 0) or Color3.fromRGB(255, 0, 0))  -- Change color based on health
+                    end)
+                end
+            end
         end
     end
 
@@ -238,6 +256,13 @@ local function removeESP(player)
             local nameTag = head:FindFirstChild("ESP_NameTag")
             if nameTag then
                 nameTag:Destroy()
+            end
+        end
+        local rightArm = character:FindFirstChild("Right Arm")
+        if rightArm then
+            local healthBarBackground = rightArm:FindFirstChild("HealthBar")
+            if healthBarBackground then
+                healthBarBackground:Destroy()
             end
         end
     end
@@ -292,8 +317,13 @@ RunService.RenderStepped:Connect(function()
     applyFullbright()
 end)
 
--- Create the menu GUI
+-- Create the menu GUI with colors and consistent button styles
 local function createMenu()
+    -- Check if the menu already exists
+    if LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("MenuGui") then
+        return -- Exit the function if the menu already exists
+    end
+
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "MenuGui"
     screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
@@ -301,7 +331,7 @@ local function createMenu()
     local menuFrame = Instance.new("Frame")
     menuFrame.Size = UDim2.new(0, 300, 0, 400)
     menuFrame.Position = UDim2.new(0.5, -150, 0.5, -200)
-    menuFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    menuFrame.BackgroundColor3 = Color3.fromRGB(60, 0, 60) -- Black purple color (dark purple)
     menuFrame.BorderSizePixel = 0
     menuFrame.Parent = screenGui
 
@@ -318,7 +348,7 @@ local function createMenu()
     local fullbrightButton = Instance.new("TextButton")
     fullbrightButton.Size = UDim2.new(1, 0, 0, 50)
     fullbrightButton.Position = UDim2.new(0, 0, 0.1, 0)
-    fullbrightButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    fullbrightButton.BackgroundColor3 = Color3.fromRGB(100, 0, 100)
     fullbrightButton.BorderSizePixel = 0
     fullbrightButton.Text = "Fullbright (Off)"
     fullbrightButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -335,20 +365,23 @@ local function createMenu()
     espButton.Name = "ESPButton"
     espButton.Size = UDim2.new(1, 0, 0, 50)
     espButton.Position = UDim2.new(0, 0, 0.2, 0)
-    espButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    espButton.BackgroundColor3 = Color3.fromRGB(100, 0, 100)
     espButton.BorderSizePixel = 0
     espButton.Text = "ESP (Off)"
     espButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     espButton.TextSize = 16
     espButton.Parent = menuFrame
 
-    espButton.MouseButton1Click:Connect(toggleESP)
+    espButton.MouseButton1Click:Connect(function()
+        toggleESP()
+        espButton.Text = "ESP (" .. (espEnabled and "On" or "Off") .. ")"
+    end)
 
     -- Button to toggle Aimbot
     local aimbotButton = Instance.new("TextButton")
     aimbotButton.Size = UDim2.new(1, 0, 0, 50)
     aimbotButton.Position = UDim2.new(0, 0, 0.3, 0)
-    aimbotButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    aimbotButton.BackgroundColor3 = Color3.fromRGB(100, 0, 100)
     aimbotButton.BorderSizePixel = 0
     aimbotButton.Text = "Aimbot (Off)"
     aimbotButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -364,7 +397,7 @@ local function createMenu()
     local infiniteJumpButton = Instance.new("TextButton")
     infiniteJumpButton.Size = UDim2.new(1, 0, 0, 50)
     infiniteJumpButton.Position = UDim2.new(0, 0, 0.4, 0)
-    infiniteJumpButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    infiniteJumpButton.BackgroundColor3 = Color3.fromRGB(100, 0, 100)
     infiniteJumpButton.BorderSizePixel = 0
     infiniteJumpButton.Text = "Infinite Jump (Off)"
     infiniteJumpButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -380,7 +413,7 @@ local function createMenu()
     local flyButton = Instance.new("TextButton")
     flyButton.Size = UDim2.new(1, 0, 0, 50)
     flyButton.Position = UDim2.new(0, 0, 0.5, 0)
-    flyButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    flyButton.BackgroundColor3 = Color3.fromRGB(100, 0, 100)
     flyButton.BorderSizePixel = 0
     flyButton.Text = "Fly (Off)"
     flyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
